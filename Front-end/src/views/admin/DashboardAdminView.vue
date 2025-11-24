@@ -143,12 +143,18 @@ async function carregarDashboard() {
     }
 
     // Pedidos recentes formatados
-    pedidosRecentes.value = listaPedidos.slice(0, 5).map(p => ({
-      id: p.id,
-      nomeCliente: p.clienteNome || p.cliente?.nome || "Cliente",
-      totalPedido: formatarBRL(p.total ?? p.valorTotal ?? 0),
-      statusPedido: traduzirStatus(p.status),
-    }));
+    pedidosRecentes.value = listaPedidos
+      .filter(p => {
+        const s = p?.status;
+        return s === 1 || s === "1" || s === "Finalizado";
+      })
+      .slice(0, 5)
+      .map(p => ({
+        id: p.id,
+        nomeCliente: p.clienteNome || p.cliente?.nome || "Cliente",
+        totalPedido: formatarBRL(p.total ?? p.valorTotal ?? 0),
+        statusPedido: traduzirStatus(p.status),
+      }));
 
     // Receita mensal (apenas finalizados) via serviço/endpoint
     try {
@@ -171,11 +177,19 @@ async function carregarDashboard() {
     // Produtos em destaque
     try {
       const { data: destaqueData } = await api.get("/Pedido/produtos-mais-vendidos");
-      produtosDestaque.value = (destaqueData || []).map(p => ({
+      const lista = (destaqueData || []).map(p => ({
         id: p.produtoId,
-        nome: p.nome,
+        nome: (p.nome || "").toString(),
         preco: formatarBRL(p.preco ?? 0),
       }));
+      const vistos = new Set();
+      produtosDestaque.value = lista.filter(p => {
+        const valido = !!p.nome.trim();
+        if (!valido) return false;
+        if (vistos.has(p.id)) return false;
+        vistos.add(p.id);
+        return true;
+      });
     } catch (e) {
       console.warn("Falha ao carregar produtos em destaque:", e);
       produtosDestaque.value = [];

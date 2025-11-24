@@ -251,6 +251,10 @@ namespace Dunder_Store.Controllers
                 await _produtoService.RemoverProdutoAsync(id);
                 return NoContent();
             }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Erro ao remover produto: {ex.Message}");
@@ -261,8 +265,19 @@ namespace Dunder_Store.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteTodosProdutos()
         {
-            await _produtoService.RemoverTodosProdutosAsync();
-            return NoContent();
+            try
+            {
+                await _produtoService.RemoverTodosProdutosAsync();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Erro ao remover produtos: {ex.Message}");
+            }
         }
 
         [HttpPost("import-csv")]

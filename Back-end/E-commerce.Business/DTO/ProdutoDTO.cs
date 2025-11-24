@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
 
 namespace Dunder_Store.DTO
@@ -8,7 +8,7 @@ namespace Dunder_Store.DTO
         [Required] public string nome { get; set; } = string.Empty;
         [Required] public string descricao { get; set; } = string.Empty;
         [Range(0.01, double.MaxValue)] public decimal preco { get; set; }
-        [Required] public string codigoDeBarra { get; set; } = string.Empty;
+        public string? codigoDeBarra { get; set; }
         public IFormFile? imagem { get; set; }
 
         public string? cor { get; set; }

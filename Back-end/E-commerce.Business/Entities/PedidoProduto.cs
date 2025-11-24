@@ -14,11 +14,13 @@ namespace Dunder_Store.Entities
         [ForeignKey(nameof(PedidoId))]
         public Pedido Pedido { get; set; } = null!;
 
-        [Required]
-        public Guid ProdutoId { get; set; }
+        public Guid? ProdutoId { get; set; }
 
         [ForeignKey(nameof(ProdutoId))]
-        public Produto Produto { get; set; } = null!;
+        public Produto? Produto { get; set; }
+
+        public string? ProdutoNome { get; set; }
+        public string? ProdutoCodigoDeBarra { get; set; }
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "A quantidade deve ser maior que zero.")]
@@ -27,6 +29,6 @@ namespace Dunder_Store.Entities
         public decimal PrecoUnitario { get; set; }
 
         [NotMapped]
-        public decimal ValorTotal => (PrecoUnitario > 0 ? PrecoUnitario : Produto.Preco) * Quantidade;
+        public decimal ValorTotal => (PrecoUnitario > 0 ? PrecoUnitario : (Produto?.Preco ?? 0m)) * Quantidade;
     }
 }

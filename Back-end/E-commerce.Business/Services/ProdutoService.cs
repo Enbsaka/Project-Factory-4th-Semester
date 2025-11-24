@@ -24,9 +24,48 @@ namespace Dunder_Store.Services
                 var pai = await _produtoRepository.GetByIdAsync(produto.ProdutoPaiId.Value);
                 if (pai == null) throw new Exception("Produto pai não existe.");
             }
+            if (string.IsNullOrWhiteSpace(produto.CodigoDeBarra))
+            {
+                var prefix = "789";
+                var lastBase = await _produtoRepository.GetMaxEAN13BaseAsync(prefix);
+                var nextBase = lastBase != null ? IncrementBase12(lastBase) : "789000000001";
+                var checksum = CalculateEan13Checksum(nextBase);
+                var code = nextBase + checksum;
+                if (await _produtoRepository.ExistsByCodigoAsync(code))
+                {
+                    nextBase = IncrementBase12(nextBase);
+                    checksum = CalculateEan13Checksum(nextBase);
+                    code = nextBase + checksum;
+                }
+                produto.CodigoDeBarra = code;
+            }
 
             await _produtoRepository.AddAsync(produto);
             return produto;
+        }
+
+        private static string IncrementBase12(string base12)
+        {
+            var num = long.Parse(base12);
+            num++;
+            var s = num.ToString().PadLeft(12, '0');
+            if (!s.StartsWith("789")) s = "789" + s.Substring(3);
+            return s;
+        }
+
+        private static string CalculateEan13Checksum(string base12)
+        {
+            var sum = 0;
+            for (int i = 0; i < 12; i++)
+            {
+                var digit = base12[i] - '0';
+                var posFromRight = 12 - i;
+                var weight = (posFromRight % 2 == 1) ? 3 : 1;
+                sum += digit * weight;
+            }
+            var mod = sum % 10;
+            var check = (10 - mod) % 10;
+            return check.ToString();
         }
 
         public async Task AtualizarProdutoAsync(Produto produto)
@@ -34,7 +73,10 @@ namespace Dunder_Store.Services
             var existente = await _produtoRepository.GetByIdAsync(produto.Id);
             if (existente == null) throw new Exception("Produto não encontrado.");
 
-            existente.Nome = produto.Nome ?? existente.Nome;
+            var nomeOriginal = existente.Nome;
+            var novoNome = produto.Nome ?? existente.Nome;
+            var nomeAlterado = produto.Nome != null && !string.Equals(novoNome, nomeOriginal, StringComparison.Ordinal);
+            existente.Nome = novoNome;
             existente.Descricao = produto.Descricao ?? existente.Descricao;
             existente.Preco = produto.Preco > 0 ? produto.Preco : existente.Preco;
             existente.CodigoDeBarra = produto.CodigoDeBarra ?? existente.CodigoDeBarra;
@@ -50,6 +92,14 @@ namespace Dunder_Store.Services
                 {
                     v.CategoriaId = existente.CategoriaId;
                     v.Preco = existente.Preco;
+                    if (nomeAlterado)
+                    {
+                        var sufixo = new List<string>();
+                        if (!string.IsNullOrWhiteSpace(v.Cor)) sufixo.Add(v.Cor);
+                        if (!string.IsNullOrWhiteSpace(v.Tamanho)) sufixo.Add(v.Tamanho);
+                        var combinado = sufixo.Count > 0 ? $"{novoNome} - {string.Join(" / ", sufixo)}" : novoNome;
+                        v.Nome = combinado;
+                    }
                     await _produtoRepository.UpdateAsync(v);
                 }
             }
@@ -69,16 +119,11 @@ namespace Dunder_Store.Services
                 var variacoesDeletaveis = new List<Produto>();
                 foreach (var produto in produtos)
                 {
-                    if (await _pedidoProdutoRepository.ExisteEmPedidoFinalizadoAsync(produto.Id))
-                        throw new Exception("Um ou mais produtos já constam em pedidos finalizados; não é possível remover todos.");
-
                     deletaveis.Add(produto);
                     if (produto.Variacoes != null)
                     {
                         foreach (var v in produto.Variacoes)
                         {
-                            if (await _pedidoProdutoRepository.ExisteEmPedidoFinalizadoAsync(v.Id))
-                                throw new Exception("Variações de produto constam em pedidos finalizados; não é possível remover todos.");
                             variacoesDeletaveis.Add(v);
                         }
                     }
@@ -103,19 +148,12 @@ namespace Dunder_Store.Services
             var produto = await _produtoRepository.GetByIdAsync(id);
             if (produto == null) throw new Exception("Produto não encontrado.");
 
-            // Regra: preservar histórico — não permitir remover se já foi vendido (pedido finalizado)
-            if (await _pedidoProdutoRepository.ExisteEmPedidoFinalizadoAsync(produto.Id))
-                throw new Exception("Produto presente em pedidos finalizados; não pode ser removido.");
-
             await _pedidoProdutoRepository.RemoverPorProdutoIdAsync(produto.Id);
 
             if (produto.Variacoes != null)
             {
                 foreach (var v in produto.Variacoes)
                 {
-                    // Mesma regra aplicada às variações
-                    if (await _pedidoProdutoRepository.ExisteEmPedidoFinalizadoAsync(v.Id))
-                        throw new Exception("Variação presente em pedidos finalizados; não pode ser removida.");
                     await _pedidoProdutoRepository.RemoverPorProdutoIdAsync(v.Id);
                     await _produtoRepository.DeleteAsync(v);
                 }

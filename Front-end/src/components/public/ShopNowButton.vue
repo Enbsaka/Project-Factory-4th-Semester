@@ -1,6 +1,6 @@
 <template>
   <div class="relative">
-    <button @click="onBuyNow" class="mt-4 w-full flex items-center justify-center gap-2 bg-white border border-[#141A7C] text-[#141A7C] py-2 rounded-md hover:bg-indigo-800 hover:text-white transition">
+    <button @click="onBuyNow" class="w-full h-11 flex items-center justify-center gap-2 bg-white border border-[#141A7C] text-[#141A7C] text-sm font-medium rounded-md hover:bg-[#E5EBFF] transition">
       Comprar Agora
     </button>
     <div v-if="showPrompt" class="absolute left-0 right-0 -bottom-14 mx-auto w-full max-w-sm bg-[#E5EBFF] text-[#0B1739] text-sm p-3 rounded-md shadow">
@@ -33,11 +33,12 @@ async function onBuyNow() {
     router.push('/login')
     return
   }
-  // Exigir seleção de variação quando houver
-  const exigeCor = !!props.produto?.cor || (Array.isArray(props.produto?.variacoes) && props.produto.variacoes.some(v => v.cor))
-  const exigeTam = !!props.produto?.tamanho || (Array.isArray(props.produto?.variacoes) && props.produto.variacoes.some(v => v.tamanho))
+  // Exigir seleção SOMENTE quando houver variações
+  const hasVariacoes = Array.isArray(props.produto?.variacoes) && props.produto.variacoes.length > 0
+  const exigeCor = hasVariacoes && props.produto.variacoes.some(v => v.cor)
+  const exigeTam = hasVariacoes && props.produto.variacoes.some(v => v.tamanho)
   const temMatriz = Array.isArray(props.variacaoQuantidades) && props.variacaoQuantidades.some(v => Number(v.quantidade || 0) > 0)
-  if (((exigeCor && !props.corSelecionada) || (exigeTam && !props.tamanhoSelecionado)) && !temMatriz) {
+  if (hasVariacoes && ((exigeCor && !props.corSelecionada) || (exigeTam && !props.tamanhoSelecionado)) && !temMatriz) {
     showPrompt.value = true
     setTimeout(() => { showPrompt.value = false }, 2500)
     return
@@ -56,40 +57,75 @@ async function onBuyNow() {
 
     const existentes = new Map()
     for (const item of itens) {
-      const produtoId = item.ProdutoId ?? item.produtoId
-      if (!produtoId) continue
-      try {
-        const detalhe = await productService.getById(produtoId)
-        const barcode = detalhe?.codigoDeBarra ?? detalhe?.CodigoDeBarra
-        if (barcode) {
-          const qtd = item.Quantidade ?? item.quantidade ?? 1
-          existentes.set(barcode, (existentes.get(barcode) || 0) + qtd)
-        }
-      } catch {}
+      const pid = item?.ProdutoId ?? item?.produtoId ?? null
+      const barcode = item?.CodigoDeBarra ?? item?.codigoDeBarra ?? null
+      const qtd = item?.Quantidade ?? item?.quantidade ?? 1
+      const key = pid ? `pid:${pid}` : (barcode ? `ean:${barcode}` : null)
+      if (!key) continue
+      const prev = existentes.get(key)
+      const merged = {
+        ProdutoId: pid ?? (prev?.ProdutoId ?? null),
+        CodigoDeBarra: barcode ?? (prev?.CodigoDeBarra ?? null),
+        Quantidade: (prev?.Quantidade ?? 0) + qtd
+      }
+      existentes.set(key, merged)
     }
     const novosItens = []
     if (temMatriz) {
       for (const v of props.variacaoQuantidades) {
         const q = Number(v?.quantidade || 0)
-        const barcode = v?.codigoDeBarra || v?.CodigoDeBarra
-        if (q > 0 && barcode) novosItens.push({ CodigoDeBarra: barcode, Quantidade: q })
+        let barcode = v?.codigoDeBarra || v?.CodigoDeBarra
+        if (!barcode && (v?.produtoId || v?.ProdutoId)) {
+          try {
+            const detalhe = await productService.getById(v?.produtoId || v?.ProdutoId)
+            barcode = detalhe?.codigoDeBarra || detalhe?.CodigoDeBarra || null
+          } catch {}
+        }
+        if (q > 0 && (barcode || (v?.produtoId || v?.ProdutoId))) {
+          novosItens.push({ ProdutoId: v?.produtoId || v?.ProdutoId || null, CodigoDeBarra: barcode || null, Quantidade: q })
+        }
       }
     } else {
-      const codigoNovo = props.produto.codigoDeBarra ?? props.produto.CodigoDeBarra
-      if (!codigoNovo) return
+      let codigoNovo = props.produto.codigoDeBarra ?? props.produto.CodigoDeBarra
+      if (!codigoNovo) {
+        try {
+          const detalhe = await productService.getById(props.produto.id || props.produto.Id)
+          codigoNovo = detalhe?.codigoDeBarra ?? detalhe?.CodigoDeBarra ?? null
+        } catch {}
+        if (!codigoNovo && !(props.produto.id || props.produto.Id)) return
+      }
       const quantidadeNum = Number(props.quantidade ?? 1)
-      novosItens.push({ CodigoDeBarra: codigoNovo, Quantidade: isNaN(quantidadeNum) ? 1 : quantidadeNum })
+      novosItens.push({ ProdutoId: props.produto.id || props.produto.Id || null, CodigoDeBarra: codigoNovo || null, Quantidade: isNaN(quantidadeNum) ? 1 : quantidadeNum })
     }
 
-    for (const { CodigoDeBarra, Quantidade } of novosItens) {
-      existentes.set(CodigoDeBarra, (existentes.get(CodigoDeBarra) || 0) + Quantidade)
+    for (const novo of novosItens) {
+      const key = novo.ProdutoId ? `pid:${novo.ProdutoId}` : (novo.CodigoDeBarra ? `ean:${novo.CodigoDeBarra}` : null)
+      if (!key) continue
+      const prev = existentes.get(key)
+      const merged = {
+        ProdutoId: novo.ProdutoId ?? (prev?.ProdutoId ?? null),
+        CodigoDeBarra: novo.CodigoDeBarra ?? (prev?.CodigoDeBarra ?? null),
+        Quantidade: (prev?.Quantidade ?? 0) + (novo.Quantidade ?? 0)
+      }
+      existentes.set(key, merged)
     }
 
-    const atualizados = Array.from(existentes.entries()).map(([CodigoDeBarra, Quantidade]) => ({ CodigoDeBarra, Quantidade }))
+    const atualizados = Array.from(existentes.values()).map(v => ({ ProdutoId: v.ProdutoId, CodigoDeBarra: v.CodigoDeBarra, Quantidade: v.Quantidade }))
+    console.log('Payload enviado ao carrinho (buy now):', atualizados)
     await carrinhoService.atualizarCarrinho(pedidoId, atualizados, cpf)
+    const carrinhoAtual = await carrinhoService.getCarrinho(clienteId)
+    console.log('Carrinho após atualizar (buy now):', carrinhoAtual)
+    const itensCarrinho = carrinhoAtual?.Produtos ?? carrinhoAtual?.produtos ?? []
+    if ((itensCarrinho?.length ?? 0) === 0) {
+      alert('Não foi possível adicionar o produto ao carrinho. Tente novamente.')
+      return
+    }
+    window.dispatchEvent(new CustomEvent('cart:updated'))
     router.push('/carrinho/checkout')
   } catch (e) {
-    console.error('Erro ao comprar agora:', e)
+    const msg = e?.response?.data || e?.message || 'Falha ao atualizar carrinho'
+    console.error('Erro ao comprar agora:', msg)
+    alert(String(msg))
   }
 }
 </script>

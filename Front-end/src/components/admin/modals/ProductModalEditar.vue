@@ -42,11 +42,8 @@
             v-model="form.categoriaId"
             class="w-full border rounded-lg px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-400 focus:outline-none"
           >
-            <option disabled value="">Selecione uma categoria</option>
-            <optgroup v-for="p in normalizadas" :key="p.id" :label="p.nome">
-              <option :value="p.id">(Pai) {{ p.nome }}</option>
-              <option v-for="s in p.subcategorias" :key="s.id" :value="s.id">{{ s.nome }}</option>
-            </optgroup>
+            <option disabled value="">Selecione uma subcategoria</option>
+            <option v-for="opt in leafOptions" :key="opt.id" :value="opt.id">{{ opt.label }}</option>
           </select>
         </div>
       </div>
@@ -105,16 +102,21 @@ const form = reactive({
 });
 
 // Flatten categorias hierárquicas para seleção de subcategoria com optgroup
-const normalizadas = computed(() => {
-  return (categorias.value || []).map((c) => ({
-    id: c.id ?? c.Id,
-    nome: c.nome ?? c.Nome,
-    subcategorias: (c.subcategorias ?? c.Subcategorias ?? []).map((s) => ({
-      id: s.id ?? s.Id,
-      nome: s.nome ?? s.Nome,
-      subcategorias: s.subcategorias ?? s.Subcategorias ?? [],
-    })),
-  }));
+const leafOptions = computed(() => {
+  const res = [];
+  function walk(node, path) {
+    const id = node.id ?? node.Id;
+    const nome = node.nome ?? node.Nome;
+    const subs = node.subcategorias ?? node.Subcategorias ?? [];
+    const nextPath = path ? `${path} > ${nome}` : nome;
+    if (!subs || subs.length === 0) {
+      res.push({ id, label: nextPath });
+      return;
+    }
+    subs.forEach((child) => walk(child, nextPath));
+  }
+  (categorias.value || []).forEach((c) => walk(c, ""));
+  return res;
 });
 
 function parsePrecoFlex(text) {

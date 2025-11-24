@@ -89,10 +89,10 @@ namespace Dunder_Store.Controllers
                 Produtos = pedido.PedidoProdutos.Select(pp => new
                 {
                     pp.ProdutoId,
-                    pp.Produto.Nome,
-                    pp.Produto.Preco,
-                    pp.Produto.CodigoDeBarra,
-                    ImagemURL = ToAbsoluteImageUrl(pp.Produto.ImagemURL),
+                    Nome = pp.Produto?.Nome ?? pp.ProdutoNome ?? "Produto removido",
+                    Preco = pp.PrecoUnitario > 0 ? pp.PrecoUnitario : (pp.Produto?.Preco ?? 0m),
+                    CodigoDeBarra = pp.Produto?.CodigoDeBarra ?? pp.ProdutoCodigoDeBarra,
+                    ImagemURL = ToAbsoluteImageUrl(pp.Produto?.ImagemURL),
                     pp.Quantidade,
                     ValorTotalProduto = pp.ValorTotal
                 }),
@@ -174,10 +174,10 @@ namespace Dunder_Store.Controllers
                 Produtos = carrinho.PedidoProdutos.Select(pp => new
                 {
                     pp.ProdutoId,
-                    pp.Produto.Nome,
-                    pp.Produto.Preco,
-                    pp.Produto.CodigoDeBarra,
-                    ImagemURL = ToAbsoluteImageUrl(pp.Produto.ImagemURL),
+                    Nome = pp.Produto?.Nome ?? pp.ProdutoNome ?? "Produto removido",
+                    Preco = pp.PrecoUnitario > 0 ? pp.PrecoUnitario : (pp.Produto?.Preco ?? 0m),
+                    CodigoDeBarra = pp.Produto?.CodigoDeBarra ?? pp.ProdutoCodigoDeBarra,
+                    ImagemURL = ToAbsoluteImageUrl(pp.Produto?.ImagemURL),
                     pp.Quantidade,
                     ValorTotalProduto = pp.ValorTotal
                 }),
@@ -204,7 +204,7 @@ namespace Dunder_Store.Controllers
         }
 
         [HttpGet("produtos-mais-vendidos")]
-        [Authorize(Roles = "Admin")]
+        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<object>>> GetProdutosMaisVendidos()
         {
             var produtosMaisVendidos = await _pedidoService.GetProdutosMaisVendidosAsync(5);
@@ -240,7 +240,7 @@ namespace Dunder_Store.Controllers
 
         [HttpPut("{id:guid}")]
         [Authorize(Roles = "Cliente,Admin")]
-        public async Task<IActionResult> UpdatePedido(Guid id, PedidoDTO pedidoAtualizadoDTO)
+        public async Task<IActionResult> UpdatePedido(Guid id, [FromBody] PedidoDTO pedidoAtualizadoDTO)
         {
             var pedido = await _pedidoService.GetDetalhadoAsync(id);
             if (pedido == null)
@@ -254,11 +254,13 @@ namespace Dunder_Store.Controllers
             }
             try
             {
-                if (pedidoAtualizadoDTO.produtos == null || pedidoAtualizadoDTO.produtos.Count == 0)
+                if (pedidoAtualizadoDTO.produtos == null)
                     return BadRequest("É necessário enviar a lista de produtos.");
 
-                var itens = pedidoAtualizadoDTO.produtos.Select(p => (p.CodigoDeBarra, p.Quantidade)).ToList();
-                await _pedidoService.AtualizarItensAsync(id, itens);
+                var itensFlex = pedidoAtualizadoDTO.produtos
+                    .Select(p => (p.ProdutoId, string.IsNullOrWhiteSpace(p.CodigoDeBarra) ? null : p.CodigoDeBarra, p.Quantidade))
+                    .ToList();
+                await _pedidoService.AtualizarItensAsync(id, itensFlex);
                 if (pedidoAtualizadoDTO.freteValor.HasValue)
                     await _pedidoService.AtualizarFreteAsync(id, pedidoAtualizadoDTO.freteValor);
                 return NoContent();

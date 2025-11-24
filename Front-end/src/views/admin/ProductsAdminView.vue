@@ -8,7 +8,7 @@
       :categorias="categorias"
       v-model:busca="busca"
       v-model:filtro-categorias="filtroCategorias"
-      @buscar="carregarProdutos"
+      @buscar="onBuscar"
     />
 
     <!-- Tabela -->
@@ -108,4 +108,9 @@ const {
   carregarProdutos,
   excluirProduto,
 } = useProducts();
+
+function onBuscar() {
+  paginaAtual.value = 1;
+  carregarProdutos();
+}
 </script>

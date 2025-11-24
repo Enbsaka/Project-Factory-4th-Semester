@@ -57,7 +57,7 @@
 
         <div class="space-y-4">
           <div v-for="item in carrinho?.Produtos || []" :key="item.ProdutoId" class="flex items-center gap-4">
-            <img :src="item.ImagemURL || 'https://via.placeholder.com/60'" alt="" class="w-16 h-16 rounded-md object-cover" />
+            <img :src="item.ImagemURL || placeholderImg" alt="Produto" class="w-16 h-16 rounded-md object-cover" />
             <div>
               <p class="text-sm font-medium text-[#0B1739]">{{ item.Nome }}</p>
               <p class="text-sm text-gray-500">Qtd: {{ item.Quantidade }}</p>
@@ -74,12 +74,28 @@
             <span>R$ {{ subtotal.toFixed(2) }}</span>
           </div>
           <div class="flex justify-between" v-if="desconto > 0">
-            <span>Desconto</span>
+            <span>Desconto do cupom</span>
             <span>- R$ {{ desconto.toFixed(2) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Quantidade de produtos</span>
+            <span>{{ quantidadeProdutos }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Itens distintos</span>
+            <span>{{ itensDistintos }}</span>
           </div>
           <div class="flex justify-between">
             <span>Frete</span>
             <span>R$ {{ freteExibir.toFixed(2) }}</span>
+          </div>
+          <div class="flex justify-between" v-if="cupomResumo">
+            <span>Cupom</span>
+            <span>{{ cupomResumo }}</span>
+          </div>
+          <div class="flex justify-between" v-if="enderecoResumo">
+            <span>Entrega para</span>
+            <span>{{ enderecoResumo }}</span>
           </div>
         </div>
 
@@ -90,14 +106,20 @@
           <span>R$ {{ total.toFixed(2) }}</span>
         </div>
 
-        <div class="mt-4">
-          <label class="block text-sm text-gray-600 mb-1">Cupom de desconto</label>
-          <div class="flex gap-2">
-            <input v-model="cupomCodigo" type="text" placeholder="EX: PROMO10" class="flex-1 border rounded-md px-3 py-2 focus:ring-[#0B1739] focus:border-[#0B1739]" />
-            <button @click="aplicarCupom" class="px-4 py-2 bg-[#0B1739] text-white rounded-md hover:opacity-90">Aplicar</button>
-          </div>
-          <p v-if="cupomAplicadoInfo" class="text-xs text-gray-500 mt-1">Cupom aplicado: {{ cupomAplicadoInfo }}</p>
+      <div class="mt-4">
+        <label class="block text-sm text-gray-600 mb-1">Cupom de desconto</label>
+        <div class="flex gap-2">
+          <input v-model="cupomCodigo" :disabled="temCupom" type="text" placeholder="EX: PROMO10" class="flex-1 border rounded-md px-3 py-2 focus:ring-[#0B1739] focus:border-[#0B1739] disabled:bg-gray-100 disabled:text-gray-500" />
+          <button @click="aplicarCupom" :disabled="temCupom" class="px-4 py-2 bg-[#0B1739] text-white rounded-md hover:opacity-90 disabled:opacity-50">Aplicar</button>
         </div>
+        <p v-if="cupomAplicadoInfo" class="text-xs text-gray-700 mt-1">Cupom aplicado: <span class="font-medium text-[#0B1739]">{{ cupomAplicadoInfo }}</span></p>
+        <div v-if="cupomSucesso" class="mt-2 bg-green-100 text-green-700 text-xs px-3 py-2 rounded-md border border-green-200">{{ cupomSucesso }}</div>
+        <div v-if="cupomErro" class="mt-2 bg-red-100 text-red-700 text-xs px-3 py-2 rounded-md border border-red-200">{{ cupomErro }}</div>
+        <div v-if="temCupom" class="mt-2 flex items-center justify-between">
+          <span class="text-xs text-gray-500">Para trocar o cupom, remova o atual.</span>
+          <button @click="removerCupom" class="text-xs px-3 py-1 border border-red-200 text-red-600 rounded-md hover:bg-red-50">Remover cupom</button>
+        </div>
+      </div>
 
         <button @click="finalizarPedido" :disabled="botaoFinalizarDesabilitado" class="mt-6 w-full bg-[#0B1739] text-white font-medium py-3 rounded-md hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
           Finalizar Pedido
@@ -134,6 +156,10 @@ const endereco = ref({
 const frete = ref(0);
 const cupomCodigo = ref("");
 const cupomAplicadoInfo = ref("");
+const cupomErro = ref("");
+const placeholderImg = new URL('../../assets/images/imagem_sapateira.png', import.meta.url).href
+const cupomSucesso = ref("");
+const temCupom = computed(() => !!(carrinho.value?.Cupom?.Codigo || carrinho.value?.Cupom?.codigo))
 
 const carregarCarrinho = async () => {
   try {
@@ -147,22 +173,37 @@ const carregarCarrinho = async () => {
       pedidoId = carrinhoAtual?.id ?? carrinhoAtual?.Id;
     }
 
-    // Preencher endereço a partir do perfil
+    // Preencher endereço a partir do perfil (preserva valores já preenchidos)
     if (perfil) {
-      endereco.value.cep = perfil?.cep ?? perfil?.Cep ?? '';
-      endereco.value.estado = perfil?.Uf ?? perfil?.uf ?? perfil?.Estado ?? perfil?.estado ?? '';
-      endereco.value.logradouro = perfil?.Logradouro ?? perfil?.logradouro ?? perfil?.Endereco ?? perfil?.endereco ?? '';
-      // Inclui fallback para camelCase e evita sobrescrever com undefined
-      const numEnd = perfil?.NumEndereco ?? perfil?.numEndereco ?? '';
-      endereco.value.numero = String(numEnd || '');
-      endereco.value.bairro = perfil?.Bairro ?? perfil?.bairro ?? '';
-      endereco.value.cidade = perfil?.Localidade ?? perfil?.cidade ?? perfil?.Cidade ?? '';
+      const atual = { ...endereco.value };
+      const perfilCidade = perfil?.Localidade ?? perfil?.cidade ?? perfil?.Cidade ?? '';
+      const perfilEstado = perfil?.Uf ?? perfil?.uf ?? perfil?.Estado ?? perfil?.estado ?? '';
+      const perfilLogradouro = perfil?.Logradouro ?? perfil?.logradouro ?? perfil?.Endereco ?? perfil?.endereco ?? '';
+      const perfilBairro = perfil?.Bairro ?? perfil?.bairro ?? '';
+      const perfilCep = perfil?.cep ?? perfil?.Cep ?? '';
+      const perfilNum = String(perfil?.NumEndereco ?? perfil?.numEndereco ?? '');
+
+      endereco.value.cep = atual.cep || perfilCep;
+      endereco.value.estado = atual.estado || perfilEstado;
+      endereco.value.logradouro = atual.logradouro || perfilLogradouro;
+      endereco.value.numero = atual.numero || perfilNum;
+      endereco.value.bairro = atual.bairro || perfilBairro;
+      endereco.value.cidade = atual.cidade || perfilCidade;
     }
 
     // Buscar carrinho do cliente (evita 403 do endpoint admin-only)
     const clienteId = perfil?.id ?? perfil?.Id;
     const data = await carrinhoService.getCarrinho(clienteId);
     if (data) {
+      const normalizarCupom = () => {
+        const c = data.Cupom ?? data.cupom;
+        if (!c) return undefined;
+        return {
+          Codigo: c.Codigo ?? c.codigo ?? '',
+          DescontoPercentual: c.DescontoPercentual ?? c.descontoPercentual ?? 0,
+          DataExpiracao: c.DataExpiracao ?? c.dataExpiracao ?? null
+        };
+      };
       carrinho.value = {
         ...data,
         Produtos: await Promise.all((data.Produtos || data.produtos || []).map(async p => {
@@ -186,7 +227,7 @@ const carregarCarrinho = async () => {
         Frete: data.Frete ?? data.frete ?? 0,
         ValorTotalSemDesconto: data.ValorTotalSemDesconto ?? data.valorTotalSemDesconto ?? (Array.isArray(data.Produtos || data.produtos) ? (data.Produtos || data.produtos).reduce((acc, p) => acc + Number(p.Preco ?? p.preco ?? 0) * Number(p.Quantidade ?? p.quantidade ?? 0), 0) : 0),
         ValorTotalComDesconto: data.ValorTotalComDesconto ?? data.valorTotal ?? undefined,
-        Cupom: data.Cupom ?? data.cupom ?? undefined
+        Cupom: normalizarCupom()
       };
     }
     await calcularFreteApi();
@@ -218,6 +259,24 @@ const desconto = computed(() => {
 
 const freteExibir = computed(() => (carrinho.value?.Frete ?? 0) || frete.value || 0);
 const total = computed(() => subtotal.value - desconto.value + freteExibir.value);
+
+const quantidadeProdutos = computed(() => (carrinho.value?.Produtos || []).reduce((acc, p) => acc + (p.Quantidade || 0), 0))
+const itensDistintos = computed(() => (carrinho.value?.Produtos || []).length)
+const cupomResumo = computed(() => {
+  const c = carrinho.value?.Cupom
+  if (!c?.Codigo) return ''
+  const perc = c?.DescontoPercentual ?? 0
+  return perc > 0 ? `${c.Codigo} (${perc}% off)` : c.Codigo
+})
+const enderecoResumo = computed(() => {
+  const e = endereco.value
+  const uf = e.estado || ''
+  const cidade = e.cidade || ''
+  const cep = (e.cep || '').replace(/\D/g, '')
+  if (!cidade && !uf && !cep) return ''
+  const cepFmt = cep ? cep.replace(/(\d{5})(\d{3})/, '$1-$2') : ''
+  return [cidade, uf].filter(Boolean).join('/') + (cepFmt ? ` • CEP ${cepFmt}` : '')
+})
 
 const enderecoValido = computed(() => {
   const e = endereco.value;
@@ -293,13 +352,38 @@ const finalizarPedido = async () => {
 async function aplicarCupom() {
   try {
     if (!cupomCodigo.value) return;
-    await carrinhoService.aplicarCupom(pedidoId, cupomCodigo.value);
-    await carregarCarrinho();
-    cupomAplicadoInfo.value = carrinho.value?.Cupom?.Codigo ? `${carrinho.value.Cupom.Codigo} (${carrinho.value.Cupom.DescontoPercentual}% off)` : '';
+    if (temCupom.value) {
+      cupomErro.value = "Já existe um cupom aplicado. Remova para trocar.";
+      return;
+    }
+    cupomErro.value = "";
+    cupomSucesso.value = "";
+  await carrinhoService.aplicarCupom(pedidoId, cupomCodigo.value);
+  await carregarCarrinho();
+  const cupomObj = carrinho.value?.Cupom || {};
+  const cod = cupomObj.Codigo ?? cupomObj.codigo ?? '';
+  const perc = cupomObj.DescontoPercentual ?? cupomObj.descontoPercentual ?? 0;
+  cupomAplicadoInfo.value = cod ? `${cod} (${perc}% off)` : '';
+    cupomSucesso.value = "Cupom aplicado com sucesso.";
   } catch (err) {
     console.error('Falha ao aplicar cupom:', err);
     const msg = err?.response?.data || err?.message || 'Cupom inválido ou expirado.';
-    alert(String(msg));
+    cupomErro.value = String(msg);
+  }
+}
+
+async function removerCupom() {
+  try {
+    cupomErro.value = "";
+    cupomSucesso.value = "";
+  await carrinhoService.removerCupom(pedidoId);
+  await carregarCarrinho();
+  cupomAplicadoInfo.value = '';
+  cupomSucesso.value = "Cupom removido com sucesso.";
+  cupomCodigo.value = '';
+  } catch (err) {
+    const msg = err?.response?.data || err?.message || 'Falha ao remover cupom.';
+    cupomErro.value = String(msg);
   }
 }
 

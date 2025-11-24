@@ -33,26 +33,21 @@ export const carrinhoService = {
   async aplicarCupom(pedidoId, cupomCodigo) {
     const codigo = String(cupomCodigo || '').trim().toUpperCase();
     if (!codigo) throw new Error('Informe um código de cupom válido');
-
-    // Pré-validação: verifica existência e expiração no servidor
-    try {
-      const { data } = await api.get(`/Cupom/${codigo}`);
-      const ativo = data?.ativo ?? data?.Ativo ?? false;
-      const exp = data?.dataExpiracao ?? data?.DataExpiracao ?? null;
-      if (!ativo) throw new Error('Cupom inativo.');
-      if (exp) {
-        const expDt = new Date(exp);
-        const agora = new Date();
-        if (expDt.getTime() < agora.getTime()) throw new Error('Cupom expirado.');
-      }
-    } catch (e) {
-      // Se 404 ou outra falha, repassa erro amigável
-      const msg = e?.response?.data || e?.message || 'Cupom inválido ou expirado.';
-      throw new Error(String(msg));
+    const { data } = await api.get(`/Cupom/${codigo}`);
+    const ativo = data?.ativo ?? data?.Ativo ?? false;
+    const exp = data?.dataExpiracao ?? data?.DataExpiracao ?? null;
+    if (!ativo) throw new Error('Cupom inativo.');
+    if (exp) {
+      const expDt = new Date(exp);
+      const agora = new Date();
+      if (expDt.getTime() < agora.getTime()) throw new Error('Cupom expirado.');
     }
-
-    // Envia como JSON para evitar 415 (Unsupported Media Type)
     await api.patch(`${RESOURCE}/${pedidoId}/cupom`, { cupomCodigo: codigo });
+  },
+
+  async removerCupom(pedidoId) {
+    // Envia null/empty para remoção
+    await api.patch(`${RESOURCE}/${pedidoId}/cupom`, { cupomCodigo: '' });
   },
 
   async finalizarPedido(pedidoId) {
@@ -60,7 +55,11 @@ export const carrinhoService = {
   }
   ,
   async limparCarrinho(pedidoId, clientecpf) {
-    // Limpa o carrinho enviando lista de produtos vazia
-    await api.put(`${RESOURCE}/${pedidoId}`, { produtos: [], clientecpf });
+    try {
+      await api.put(`${RESOURCE}/${pedidoId}`, { produtos: [], clientecpf: clientecpf ?? "" });
+    } catch (err) {
+      const msg = err?.response?.data || err?.message || 'Falha ao limpar carrinho';
+      throw new Error(String(msg));
+    }
   }
 };

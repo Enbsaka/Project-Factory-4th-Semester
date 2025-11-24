@@ -96,7 +96,30 @@ namespace Dunder_Store.Data.Repositories
         public async Task UpdateAsync(Pedido pedido)
         {
             _dbContext.Pedidos.Update(pedido);
-            await _dbContext.SaveChangesAsync();
+            try
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                foreach (var entry in ex.Entries)
+                {
+                    if (entry.State == EntityState.Deleted)
+                    {
+                        entry.State = EntityState.Detached;
+                        continue;
+                    }
+
+                    var databaseValues = await entry.GetDatabaseValuesAsync();
+                    if (databaseValues == null)
+                    {
+                        entry.State = EntityState.Detached;
+                        continue;
+                    }
+                    entry.OriginalValues.SetValues(databaseValues);
+                }
+                await _dbContext.SaveChangesAsync();
+            }
         }
 
         public async Task DeleteAsync(Pedido pedido)

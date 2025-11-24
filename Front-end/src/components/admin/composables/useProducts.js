@@ -135,18 +135,21 @@ export function useProducts() {
       show("Produto atualizado com sucesso!", "success");
     } catch (err) {
       console.error("Erro ao editar produto:", err);
-      show("Erro ao editar produto.", "error");
+      const mensagem = err?.response?.data || "Erro ao editar produto.";
+      show(mensagem, "error");
     }
   }
 
   async function excluirProduto(id) {
     try {
       await productService.remove(id);
+      modalExcluirAberto.value = false;
       await carregarProdutos();
       show("Produto excluído com sucesso!", "success");
     } catch (e) {
       console.error(e);
-      show("Erro ao excluir produto.", "error");
+      const mensagem = e?.response?.data || "Erro ao excluir produto.";
+      show(mensagem, "error");
     }
   }
 

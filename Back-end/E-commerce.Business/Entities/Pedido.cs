@@ -30,7 +30,7 @@ namespace Dunder_Store.Entities
         public decimal? FreteValor { get; set; }
 
         [NotMapped]
-        public decimal ValorTotalSemDesconto => PedidoProdutos.Sum(pp => (pp.PrecoUnitario > 0 ? pp.PrecoUnitario : pp.Produto.Preco) * pp.Quantidade);
+        public decimal ValorTotalSemDesconto => PedidoProdutos.Sum(pp => (pp.PrecoUnitario > 0 ? pp.PrecoUnitario : (pp.Produto?.Preco ?? 0m)) * pp.Quantidade);
 
         [NotMapped]
         public decimal ValorTotal

@@ -8,10 +8,13 @@ namespace Dunder_Store.Interfaces.IRepositories
             string? categoria = null, Guid? categoriaId = null, Guid[]? categoriaIds = null, int pagina = 1, int itensPorPagina = 10);
 
         Task<Produto?> GetByIdAsync(Guid id);
+        Task<Produto?> GetByCodigoDeBarraAsync(string codigoDeBarra);
         Task<IEnumerable<Produto>> GetVariacoesByProdutoPaiAsync(Guid produtoPaiId);
         Task AddAsync(Produto produto);
         Task UpdateAsync(Produto produto);
         Task DeleteAsync(Produto produto);
         Task DeleteRangeAsync(IEnumerable<Produto> produtos);
+        Task<string?> GetMaxEAN13BaseAsync(string prefix);
+        Task<bool> ExistsByCodigoAsync(string codigoDeBarra);
     }
 }

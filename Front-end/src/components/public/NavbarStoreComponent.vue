@@ -214,7 +214,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../services/api.js'
 import clienteService from '../../services/clienteService.js'
@@ -250,6 +250,10 @@ onMounted(async () => {
   const saved = localStorage.getItem('theme')
   isDark.value = saved === 'dark'
   applyTheme()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('cart:updated', carregarCartCount)
 })
 
 // Atualiza estado de login quando navegação muda
@@ -334,12 +338,15 @@ async function carregarCartCount() {
     const clienteId = perfil?.id || perfil?.Id
     if (!clienteId) return
     const carrinho = await carrinhoService.getCarrinho(clienteId)
-    const itens = carrinho?.pedidoProdutos || carrinho?.produtos || []
-    cartCount.value = itens.reduce((acc, item) => acc + (item.quantidade ?? item.Quantidade ?? 0), 0)
+    const itens = carrinho?.Produtos || carrinho?.produtos || carrinho?.PedidoProdutos || carrinho?.pedidoProdutos || []
+    cartCount.value = itens.reduce((acc, item) => acc + (item.Quantidade ?? item.quantidade ?? 0), 0)
   } catch (error) {
     // silêncio: se não logado ou erro, não mostra contagem
   }
 }
+
+// Atualiza contagem em tempo real quando carrinho muda
+window.addEventListener('cart:updated', carregarCartCount)
 
 function abrirCategorias() {
   if (hideTimer) {

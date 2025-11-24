@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from "../views/default/HomeView.vue";
 import CategoryView from "../views/default/CategoryView.vue";
 import ProductView from "../views/default/ProductView.vue";
+import ProductsListView from "../views/default/ProductsListView.vue";
 import CartView from "../views/default/CartView.vue";
 import CheckoutView from "../views/default/CheckoutView.vue";
 import SearchView from "../views/default/SearchView.vue";
@@ -86,6 +87,12 @@ const router = createRouter({
       path: "/app",
       name: "homeLogged",
       component: HomeView,
+      meta: { layout: "client", requiresAuth: true },
+    },
+    {
+      path: "/app/produtos",
+      name: "productsList",
+      component: ProductsListView,
       meta: { layout: "client", requiresAuth: true },
     },
     {

@@ -33,7 +33,7 @@
       <div v-for="(item, index) in carrinho?.Produtos ?? []" :key="item.ProdutoId" class="flex items-center justify-between border rounded-xl p-6 bg-white shadow-sm">
         <div class="flex items-center gap-4">
           <div class="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
-            <img v-if="item.ImagemURL" :src="item.ImagemURL" alt="" class="w-full h-full object-cover" />
+            <img :src="item.ImagemURL || placeholderImg" alt="Produto" class="w-full h-full object-cover" />
           </div>
           <div>
             <h2 class="text-[#0B1739] font-medium">{{ item.Nome }}</h2>
@@ -62,8 +62,16 @@
           <span>R$ {{ subtotal.toFixed(2) }}</span>
         </div>
         <div class="flex justify-between">
-          <span>Economia</span>
-          <span>R$ {{ desconto.toFixed(2) }}</span>
+          <span>Quantidade de produtos</span>
+          <span>{{ quantidadeProdutos }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Itens distintos</span>
+          <span>{{ itensDistintos }}</span>
+        </div>
+        <div class="flex justify-between" v-if="carrinho?.Cupom?.Codigo">
+          <span>Cupom</span>
+          <span>{{ carrinho.Cupom.Codigo }} ({{ carrinho.Cupom.DescontoPercentual }}% off)</span>
         </div>
         <div class="flex justify-between font-semibold text-[#0B1739] text-base mt-2">
           <span>Total</span>
@@ -89,6 +97,12 @@
         <button @click="limparCarrinho" class="mt-3 w-full border border-red-200 text-red-600 font-medium py-2 rounded-md hover:bg-red-50 transition">
           Limpar carrinho
         </button>
+        <div v-if="carrinho?.Cupom?.Codigo" class="mt-3 flex items-center justify-between">
+          <span class="text-xs text-gray-500">Cupom em uso. Remova se desejar trocar.</span>
+          <button @click="removerCupom" class="text-xs px-3 py-1 border border-red-200 text-red-600 rounded-md hover:bg-red-50">Remover cupom</button>
+        </div>
+        <div v-if="cupomSucesso" class="mt-2 bg-green-100 text-green-700 text-xs px-3 py-2 rounded-md border border-green-200">{{ cupomSucesso }}</div>
+        <div v-if="cupomErro" class="mt-2 bg-red-100 text-red-700 text-xs px-3 py-2 rounded-md border border-red-200">{{ cupomErro }}</div>
       </div>
       <p class="text-xs text-center text-gray-500 mt-2">Pagamento 100% seguro e protegido</p>
     </aside>
@@ -101,11 +115,14 @@ import { Trash } from 'lucide-vue-next'
 import { carrinhoService } from "../../services/carrinhoService.js";
 import clienteService from "../../services/clienteService.js";
 import productService from "../../services/productService.js";
+const placeholderImg = new URL('../../assets/images/imagem_sapateira.png', import.meta.url).href
 
 const clienteId = ref(null);
 const clientecpf = ref(null);
 const carrinho = ref(null);
 const loading = ref(true);
+const cupomErro = ref("");
+const cupomSucesso = ref("");
 
 const carregarCarrinho = async () => {
   try {
@@ -120,6 +137,15 @@ const carregarCarrinho = async () => {
 
     console.log("Dados do carrinho:", data);
 
+  const normalizarCupom = () => {
+    const c = data.Cupom ?? data.cupom;
+    if (!c) return undefined;
+    return {
+      Codigo: c.Codigo ?? c.codigo ?? '',
+      DescontoPercentual: c.DescontoPercentual ?? c.descontoPercentual ?? 0,
+      DataExpiracao: c.DataExpiracao ?? c.dataExpiracao ?? null
+    };
+  };
   carrinho.value = {
     Id: data.id ?? data.Id,
     ClienteId: data.clienteId ?? data.ClienteId,
@@ -128,8 +154,8 @@ const carregarCarrinho = async () => {
         ProdutoId: p.ProdutoId ?? p.produtoId ?? p.id,
         CodigoDeBarra: p.CodigoDeBarra ?? p.codigoDeBarra ?? null,
         Nome: p.Nome ?? p.nome ?? "Produto sem nome",
-        Preco: p.Preco ?? p.preco ?? 0,
-        Quantidade: p.Quantidade ?? p.quantidade ?? 1,
+        Preco: Number(p.Preco ?? p.preco ?? 0),
+        Quantidade: Number(p.Quantidade ?? p.quantidade ?? 1),
         ImagemURL: p.ImagemURL ?? p.imagemURL ?? p?.Produto?.ImagemURL ?? ""
       }
       if (!base.ImagemURL && base.ProdutoId) {
@@ -141,8 +167,9 @@ const carregarCarrinho = async () => {
       return base
     })),
       ValorTotalSemDesconto: data.ValorTotalSemDesconto ?? data.valorTotalSemDesconto ?? 0,
-      ValorTotalComDesconto: data.ValorTotalComDesconto ?? data.valorTotal ?? 0
-    };
+      ValorTotalComDesconto: data.ValorTotalComDesconto ?? data.valorTotal ?? 0,
+      Cupom: normalizarCupom()
+  };
   } catch (err) {
     console.error("Erro ao carregar o carrinho:", err);
   } finally {
@@ -172,6 +199,7 @@ const alterarQuantidade = async (produtoId, quantidade) => {
 
   await carrinhoService.atualizarCarrinho(carrinho.value.Id, produtosAtualizados, clientecpf.value);
   await carregarCarrinho();
+  window.dispatchEvent(new CustomEvent('cart:updated'))
 };
 
 const removerItem = async (produtoId) => {
@@ -191,20 +219,44 @@ const removerItem = async (produtoId) => {
 
   await carrinhoService.atualizarCarrinho(carrinho.value.Id, produtosAtualizados, clientecpf.value);
   await carregarCarrinho();
+  window.dispatchEvent(new CustomEvent('cart:updated'))
 };
 
 const limparCarrinho = async () => {
   try {
+    if (!carrinho.value?.Id) await carregarCarrinho()
+    if (!carrinho.value?.Id) throw new Error('Carrinho não disponível')
     await carrinhoService.limparCarrinho(carrinho.value.Id, clientecpf.value)
     await carregarCarrinho()
+    window.dispatchEvent(new CustomEvent('cart:updated'))
   } catch (err) {
-    console.error('Falha ao limpar carrinho:', err)
+    const msg = err?.message || 'Falha ao limpar carrinho'
+    console.error('Falha ao limpar carrinho:', msg)
+    alert(String(msg))
+  }
+}
+
+const removerCupom = async () => {
+  try {
+    cupomErro.value = "";
+    cupomSucesso.value = "";
+    if (!carrinho.value?.Id) await carregarCarrinho()
+    await carrinhoService.aplicarCupom(carrinho.value.Id, null);
+    await carregarCarrinho();
+    window.dispatchEvent(new CustomEvent('cart:updated'))
+    cupomSucesso.value = 'Cupom removido com sucesso.'
+  } catch (err) {
+    const msg = err?.response?.data || err?.message || 'Falha ao remover cupom.';
+    cupomErro.value = String(msg);
   }
 }
 
 const desconto = computed(() => {
   if (!carrinho.value) return 0;
-  return carrinho.value.ValorTotalSemDesconto - (carrinho.value.ValorTotalComDesconto ?? carrinho.value.ValorTotalSemDesconto);
+  const semDesc = Number(carrinho.value.ValorTotalSemDesconto ?? 0);
+  const comDesc = Number(carrinho.value.ValorTotalComDesconto ?? carrinho.value.ValorTotal ?? 0);
+  if (comDesc > 0 && semDesc >= comDesc) return semDesc - comDesc;
+  return 0;
 });
 
 const subtotal = computed(() => {
@@ -212,7 +264,13 @@ const subtotal = computed(() => {
   return carrinho.value.Produtos.reduce((acc, p) => acc + p.Preco * p.Quantidade, 0);
 });
 
-const total = computed(() => carrinho.value?.ValorTotalComDesconto ?? subtotal.value);
+const total = computed(() => {
+  const serverTotal = Number(carrinho.value?.ValorTotalComDesconto ?? carrinho.value?.ValorTotal ?? 0);
+  return serverTotal > 0 ? serverTotal : subtotal.value;
+});
+
+const quantidadeProdutos = computed(() => (carrinho.value?.Produtos || []).reduce((acc, p) => acc + (p.Quantidade || 0), 0))
+const itensDistintos = computed(() => (carrinho.value?.Produtos || []).length)
 
 onMounted(carregarCarrinho);
 </script>

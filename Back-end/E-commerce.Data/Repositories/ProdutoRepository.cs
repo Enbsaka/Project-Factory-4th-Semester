@@ -113,6 +113,20 @@ namespace Dunder_Store.Data.Repositories
             return produto;
         }
 
+        public async Task<Produto?> GetByCodigoDeBarraAsync(string codigoDeBarra)
+        {
+            var codigo = codigoDeBarra.Trim();
+            var produto = await _dbContext.Produtos
+                .Include(p => p.Variacoes)
+                .Include(p => p.Categoria)
+                .FirstOrDefaultAsync(p => p.CodigoDeBarra == codigo);
+
+            if (produto != null && produto.Variacoes == null)
+                produto.Variacoes = new();
+
+            return produto;
+        }
+
         public async Task<IEnumerable<Produto>> GetVariacoesByProdutoPaiAsync(Guid produtoPaiId)
         {
             var variacoes = await _dbContext.Produtos
@@ -152,6 +166,35 @@ namespace Dunder_Store.Data.Repositories
             if (list.Count == 0) return;
             _dbContext.Produtos.RemoveRange(list);
             await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task<string?> GetMaxEAN13BaseAsync(string prefix)
+        {
+            var codigos = await _dbContext.Produtos
+                .Select(p => p.CodigoDeBarra)
+                .Where(c => c != null && c.Length == 13 && c.StartsWith(prefix))
+                .ToListAsync();
+            if (codigos.Count == 0) return null;
+            long? max = null;
+            string? maxBase = null;
+            foreach (var c in codigos)
+            {
+                var base12 = c!.Substring(0, 12);
+                var allDigits = true;
+                for (int i = 0; i < base12.Length; i++) if (base12[i] < '0' || base12[i] > '9') { allDigits = false; break; }
+                if (!allDigits) continue;
+                if (!base12.StartsWith(prefix)) continue;
+                if (long.TryParse(base12, out var num))
+                {
+                    if (!max.HasValue || num > max.Value) { max = num; maxBase = base12; }
+                }
+            }
+            return maxBase;
+        }
+
+        public async Task<bool> ExistsByCodigoAsync(string codigoDeBarra)
+        {
+            return await _dbContext.Produtos.AnyAsync(p => p.CodigoDeBarra == codigoDeBarra);
         }
     }
 }

@@ -4,6 +4,7 @@ using Dunder_Store.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Dunder_Store.Migrations
 {
     [DbContext(typeof(ProdutosDbContext))]
-    partial class ProdutosDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251124035005_UpdatePedidoProdutoKey_SetNull")]
+    partial class UpdatePedidoProdutoKey_SetNull
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -20,7 +20,7 @@ namespace Dunder_Store.Database
         {
 
             modelBuilder.Entity<PedidoProduto>()
-                .HasKey(pp => new { pp.PedidoId, pp.ProdutoId });
+                .HasKey(pp => pp.Id);
 
             modelBuilder.Entity<PedidoProduto>()
                 .HasOne(pp => pp.Pedido)
@@ -32,7 +32,8 @@ namespace Dunder_Store.Database
                 .HasOne(pp => pp.Produto)
                 .WithMany(p => p.PedidoProdutos)
                 .HasForeignKey(pp => pp.ProdutoId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
 
 
             modelBuilder.Entity<Produto>()

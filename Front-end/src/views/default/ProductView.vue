@@ -6,7 +6,8 @@
         <img
           :src="selectedImage || placeholderImg"
           :alt="produto?.nome || 'Produto'"
-          class="w-[450px] h-[450px] object-contain"
+          class="w-[450px] h-[450px] object-contain cursor-zoom-in"
+          @click="abrirLightbox()"
         />
       </div>
 
@@ -37,9 +38,14 @@
 
       <div>
         <h2 class="font-semibold text-gray-800 mb-1">Descrição</h2>
-        <p class="text-gray-600 leading-relaxed text-sm">
-          {{ produto?.descricao }}
+        <p class="text-gray-600 leading-relaxed text-sm" style="white-space: pre-line;">
+          {{ descricaoExibida }}
         </p>
+        <button
+          v-if="temDescricaoLonga"
+          @click="mostrarDescricaoCompleta = !mostrarDescricaoCompleta"
+          class="mt-2 text-sm text-[#141A7C] hover:underline"
+        >{{ mostrarDescricaoCompleta ? 'Ver menos' : 'Ver mais' }}</button>
       </div>
 
       <!-- Variações -->
@@ -80,7 +86,7 @@
         <button v-if="corSelecionada || tamanhoSelecionado" @click="limparSelecao" class="ml-2 px-3 py-2 border rounded-md text-sm text-[#0B1739] hover:bg-[#E5EBFF]">Limpar seleção</button>
       </div>
 
-      <div class="flex flex-col sm:flex-row gap-4 mt-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6" v-if="produto">
         <AddtToCartButton
           :produto="produto"
           :quantidade="quantity"
@@ -96,6 +102,10 @@
           :tamanho-selecionado="tamanhoSelecionado"
           :variacao-quantidades="variacaoQuantidades"
         />
+        <RouterLink
+          to="/app/produtos"
+          class="w-full h-11 flex items-center justify-center gap-2 bg-white border border-[#141A7C] text-[#141A7C] text-sm font-medium rounded-md hover:bg-[#E5EBFF] transition"
+        >Continuar Comprando</RouterLink>
       </div>
 
       <!-- Quantidade por variação -->
@@ -104,7 +114,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div v-for="(v, idx) in variacoes" :key="v.id || v.Id || idx" class="flex items-center justify-between border rounded-md p-3">
             <div>
-              <p class="text-sm text-[#0B1739] font-medium">{{ v.nome || v.Nome || produto?.nome || 'Produto' }}</p>
+              <p class="text-sm text-[#0B1739] font-medium">{{ nomeVariacao(v) }}</p>
               <p class="text-xs text-gray-600">Cor: {{ v.cor || v.Cor || '-' }} | Tamanho: {{ v.tamanho || v.Tamanho || '-' }}</p>
             </div>
             <div class="flex items-center border rounded-md">
@@ -118,10 +128,25 @@
       </div>
     </div>
   </main>
+  <div v-if="lightboxAberto" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center" @click.self="fecharLightbox">
+    <button @click="fecharLightbox" class="absolute top-4 right-4 px-3 py-2 rounded-md bg-white/10 text-white hover:bg-white/20">Fechar</button>
+    <Swiper :modules="[Zoom, Navigation]" :zoom="true" :navigation="true" :initial-slide="lightboxIndex" class="w-full max-w-5xl h-[80vh]">
+      <SwiperSlide v-for="(img, idx) in galeria" :key="idx">
+        <div class="swiper-zoom-container w-full h-full flex items-center justify-center">
+          <img :src="img" class="max-h-full max-w-full object-contain" />
+        </div>
+      </SwiperSlide>
+    </Swiper>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
+import { Swiper, SwiperSlide } from "swiper/vue";
+import { Zoom, Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/zoom";
+import "swiper/css/navigation";
 import { useRoute } from "vue-router";
 import AddtToCartButton from "../../components/public/AddtToCartButton.vue";
 import ShopNowButton from "../../components/public/ShopNowButton.vue";
@@ -136,6 +161,18 @@ const quantity = ref(1);
 const corSelecionada = ref(null);
 const tamanhoSelecionado = ref(null);
 const variacaoQuantidades = ref([]);
+const mostrarDescricaoCompleta = ref(false);
+const descricaoCompleta = computed(() => String(produto.value?.descricao || ''));
+const temDescricaoLonga = computed(() => descricaoCompleta.value.length > 600);
+const descricaoExibida = computed(() => {
+  if (mostrarDescricaoCompleta.value) return descricaoCompleta.value;
+  const max = 600;
+  const base = descricaoCompleta.value.slice(0, max);
+  const ajustado = base.replace(/\s+\S*$/, '');
+  return temDescricaoLonga.value ? ajustado + '…' : ajustado;
+});
+const lightboxAberto = ref(false);
+const lightboxIndex = ref(0);
 
 const placeholderImg = new URL("../../assets/images/imagem_sapateira.png", import.meta.url).href;
 
@@ -189,11 +226,31 @@ function sincronizarVariacaoSelecionada(reset = false) {
   }
 }
 
+function nomeVariacao(v) {
+  const base = produto.value?.nome || produto.value?.Nome || 'Produto';
+  const cor = v?.cor || v?.Cor || '';
+  const tam = v?.tamanho || v?.Tamanho || '';
+  const parts = [];
+  if (cor) parts.push(cor);
+  if (tam) parts.push(tam);
+  return parts.length ? `${base} - ${parts.join(' / ')}` : base;
+}
+
 function limparSelecao() {
   corSelecionada.value = null;
   tamanhoSelecionado.value = null;
   // Recarrega produto original (pai)
   carregarProduto();
+}
+
+function abrirLightbox() {
+  lightboxAberto.value = true;
+  const idx = galeria.value.findIndex((g) => g === selectedImage.value);
+  lightboxIndex.value = idx >= 0 ? idx : 0;
+}
+
+function fecharLightbox() {
+  lightboxAberto.value = false;
 }
 
 const increaseQuantity = () => { quantity.value++; };
@@ -238,8 +295,10 @@ async function carregarProduto() {
 onMounted(carregarProduto);
 watch(() => route.params.id, carregarProduto);
 
-// Desabilita botões se variações existirem e não estiverem selecionadas
+// Desabilita botões apenas quando HÁ variações e nenhuma seleção/quantidade
 const botaoDesabilitado = computed(() => {
+  const haVariacoes = (variacoes.value || []).length > 0;
+  if (!haVariacoes) return false;
   const exigeCor = coresDisponiveis.value.length > 0;
   const exigeTam = tamanhosDisponiveis.value.length > 0;
   const algumaVarQtd = (variacaoQuantidades.value || []).some(v => (v.quantidade || 0) > 0);

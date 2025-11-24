@@ -4,7 +4,7 @@
       <Swiper
         :modules="[Autoplay, Pagination]"
         :autoplay="{ delay: 3000 }"
-        :loop="true"
+        :loop="slides.length >= 2"
         pagination
         class="w-full max-w-[1400px] md:w-full h-[480px] md:h-[600px] rounded-2xl shadow-lg"
       >
@@ -13,9 +13,10 @@
             <img :src="slide.src" :alt="`Banner ${slide.label}`" class="w-full h-full object-cover" />
             <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
             <div class="absolute left-6 bottom-6 text-white">
-              <h3 class="text-2xl font-semibold capitalize">{{ slide.label }}</h3>
+              <h3 class="text-2xl font-semibold capitalize">{{ slide.title || slide.label }}</h3>
+              <p v-if="slide.subtitle" class="mt-1 text-sm opacity-90">{{ slide.subtitle }}</p>
               <RouterLink
-                :to="{ name: 'search', query: { nome: slide.label } }"
+                :to="slide.categoryId ? { path: `/categoria/${slide.categoryId}` } : { name: 'search', query: { nome: slide.query || slide.label } }"
                 class="mt-2 inline-block px-4 py-2 bg-white text-gray-900 rounded-md hover:bg-gray-100"
               >Ver mais</RouterLink>
             </div>
@@ -38,22 +39,19 @@
     </div>
   </section>
 
-  <!-- Categorias (refatorado) -->
-  <ExploreCategoriesSection />
+  
 
 
   <!-- Resultados da Busca removidos (usamos SearchView) -->
 
-  <!-- Produtos em Destaque -->
+  <!-- Lista rápida de produtos com link Ver mais -->
   <section class="text-center py-10 px-6 md:px-20">
-    <h2 class="text-3xl font-bold text-gray-900 mb-3">Produtos em Destaque</h2>
-    <p class="text-gray-600 mb-10 max-w-2xl mx-auto">
-      Selecionamos os melhores produtos para você
-    </p>
+    <h2 class="text-3xl font-bold text-gray-900 mb-3">Produtos</h2>
+    <p class="text-gray-600 mb-8 max-w-2xl mx-auto">Confira alguns itens disponíveis na loja</p>
 
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 justify-items-center">
       <RouterLink
-        v-for="produto in produtosDestaque"
+        v-for="produto in produtosHome"
         :key="produto.id"
         :to="`/produto/${produto.id}`"
         class="flex flex-col items-center space-y-3 p-4 border rounded-xl hover:shadow-md transition w-full max-w-[240px] md:max-w-[260px]"
@@ -66,6 +64,10 @@
         <h4 class="text-lg font-semibold text-gray-800 truncate w-full">{{ produto.nome }}</h4>
         <p class="text-gray-600">R$ {{ Number(produto.preco ?? 0).toFixed(2) }}</p>
       </RouterLink>
+    </div>
+
+    <div class="mt-10">
+      <RouterLink to="/app/produtos" class="inline-block px-5 py-2 bg-[#141A7C] text-white rounded-md hover:bg-[#0f166a]">Ver mais</RouterLink>
     </div>
   </section>
 
@@ -80,21 +82,72 @@ import { ref, onMounted } from "vue";
 import api from "../../services/api.js";
 import productService from "../../services/productService.js";
 import { RouterLink } from "vue-router";
-import ExploreCategoriesSection from "../../components/public/ExploreCategoriesSection.vue";
+const placeholderImg = new URL("../../assets/images/imagem_sapateira.png", import.meta.url).href;
 
 const categoriaImagens = {
   masculino: new URL("../../assets/categorias/Masculino.png", import.meta.url).href,
   feminino: new URL("../../assets/categorias/Feminino.png", import.meta.url).href,
   infantil: new URL("../../assets/categorias/Infantil.png", import.meta.url).href,
-  casa: new URL("../../assets/categorias/Casa.png", import.meta.url).href,
   jeans: new URL("../../assets/categorias/Jeans.png", import.meta.url).href,
-  "beleza e perfume": new URL("../../assets/categorias/Beleza e Perfume.png", import.meta.url).href,
-  "eletrônicos": new URL("../../assets/categorias/Eletronicos.png", import.meta.url).href,
 };
 
+// Hero dedicado: se houver arquivos em assets/hero, prefere esses; senão, usa imagens de categoria
+let heroImagens = {};
+try {
+  const heroFiles = import.meta.glob("../../assets/hero/*", { eager: true, import: "default", query: "?url" });
+  heroImagens = Object.entries(heroFiles).reduce((acc, [path, url]) => {
+    const base = path.split("/").pop();
+    const nome = (base || "").replace(/\.[^.]+$/, "").toLowerCase();
+    acc[nome] = url;
+    return acc;
+  }, {});
+} catch {}
+
 // === Dados locais ===
-// Slides neutros baseados nas categorias (sem discurso de oferta/promoção)
-const slides = Object.entries(categoriaImagens).map(([label, src]) => ({ label, src }));
+const heroSlidesConfig = [
+  { key: 'masculino', title: 'Moda Masculina', subtitle: 'Ofertas em tênis e camisetas', query: 'masculino' },
+  { key: 'feminino', title: 'Moda Feminina', subtitle: 'Ofertas em sandálias e vestidos', query: 'feminino' },
+  { key: 'infantil', title: 'Infantil', subtitle: 'Conforto para os pequenos', query: 'infantil' },
+];
+
+const slides = ref([]);
+const categoriaIdsMap = ref({});
+const fixedCategoriaIds = {
+  masculino: 'fd945467-c660-11f0-ae26-7c8ae1e05077',
+  feminino: 'fd950f5a-c660-11f0-ae26-7c8ae1e05077',
+  infantil: 'fd95928e-c660-11f0-ae26-7c8ae1e05077',
+};
+
+function toKey(str) {
+  return String(str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function buildSlides() {
+  const idsMap = categoriaIdsMap.value || {};
+  slides.value = heroSlidesConfig.map(({ key, title, subtitle, query }) => {
+    const label = key;
+    const heroSrc = heroImagens[key] || null;
+    const src = heroSrc || categoriaImagens[key] || placeholderImg;
+    const k = toKey(label);
+    const categoryId = fixedCategoriaIds[k] || idsMap[k] || null;
+    return { label, src, title, subtitle, query, categoryId };
+  });
+}
+
+async function fetchCategoriasIds() {
+  try {
+    const { data } = await api.get("/categoria");
+    const map = {};
+    (data || []).forEach((c) => {
+      const name = c?.nome ?? c?.Nome ?? '';
+      const id = c?.id ?? c?.Id;
+      const k = toKey(name);
+      map[k] = id;
+    });
+    categoriaIdsMap.value = map;
+    buildSlides();
+  } catch {}
+}
 
 const benefits = [
   {
@@ -121,9 +174,8 @@ const benefits = [
 ];
 
 // === Estado ===
-const categoriasPrincipais = ref([]); // não usado após refatoração, mantido se necessário
-const produtosDestaque = ref([]);
-const placeholderImg = new URL("../../assets/images/imagem_sapateira.png", import.meta.url).href;
+const categoriasPrincipais = ref([]);
+const produtosHome = ref([]);
 
 // === Funções ===
 const getCategoriaImage = (nome) => {
@@ -153,41 +205,19 @@ const fetchCategorias = async () => {
 };
 
 const fetchProdutos = async () => {
-  // Usa os mais vendidos como destaque para Home
-  try {
-    const { data } = await api.get('/Pedido/produtos-mais-vendidos');
-    const basicos = Array.isArray(data) ? data.slice(0, 12) : [];
-    // Enriquecer com imagem e descrição ao buscar detalhamento
-    const detalhados = await Promise.all(
-      basicos.map(async (p) => {
-        try {
-          const id = p.produtoId ?? p.id; // alguns endpoints retornam produtoId
-          const full = await productService.getById(id);
-          return { ...full, quantidadeVendida: p.quantidadeVendida };
-        } catch {
-          // Garantir forma mínima para card
-          return {
-            id: p.produtoId ?? p.id,
-            nome: p.nome,
-            preco: p.preco,
-            imagemURL: p.imagemURL || p.imagemUrl,
-            quantidadeVendida: p.quantidadeVendida,
-          };
-        }
-      })
-    );
-    produtosDestaque.value = detalhados;
-  } catch (e) {
-    // Fallback para primeiros produtos se endpoint não disponível
-    const { produtos } = await productService.getAll({ pagina: 1, itensPorPagina: 8 });
-    produtosDestaque.value = produtos;
-  }
+  const { produtos } = await productService.getAll({ pagina: 1, itensPorPagina: 10 });
+  produtosHome.value = produtos;
 };
 
 
 onMounted(() => {
   fetchProdutos();
+  fetchCategoriasIds();
+  buildSlides();
 });
+
+// Garante slides iniciais para evitar avisos do Swiper antes do onMounted
+buildSlides();
 </script>
 
 <style scoped>

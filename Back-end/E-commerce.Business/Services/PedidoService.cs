@@ -84,7 +84,7 @@ namespace Dunder_Store.Services
                 if (cupom == null || !cupom.Ativo || cupom.DataExpiracao < DateTime.Now)
                     throw new Exception("Cupom inválido ou expirado.");
                 novoPedido.CupomId = cupom.Id;
-                novoPedido.Cupom = cupom;
+                novoPedido.Cupom = null;
             }
 
             // Frete opcional
@@ -102,10 +102,18 @@ namespace Dunder_Store.Services
             var pedido = await _pedidoRepository.GetDetalhadoByIdAsync(pedidoId);
             if (pedido == null) throw new Exception("Pedido não encontrado.");
             if (pedido.Status != PedidoStatus.Carrinho) throw new Exception("Não é possível alterar um pedido que já foi finalizado.");
-            if (itens == null || itens.Count == 0) throw new Exception("É necessário enviar a lista de produtos.");
+            if (itens == null) throw new Exception("É necessário enviar a lista de produtos.");
 
-            // Limpa itens atuais
-            pedido.PedidoProdutos.Clear();
+            // Suporte a limpar carrinho quando lista vazia for enviada
+            if (itens.Count == 0)
+            {
+                pedido.PedidoProdutos.Clear();
+                await _pedidoRepository.UpdateAsync(pedido);
+                return;
+            }
+
+            // Remove itens atuais diretamente no repositório para evitar conflitos de rastreamento
+            await _pedidoProdutoRepository.RemoverPorPedidoIdAsync(pedido.Id);
 
             // Mapeia códigos enviados para produtos
             var codigos = itens.Select(i => i.CodigoDeBarra.Trim()).ToList();
@@ -118,11 +126,12 @@ namespace Dunder_Store.Services
                 todosProdutos.Add(prod);
             }
 
+            var novos = new List<PedidoProduto>();
             foreach (var item in itens)
             {
                 var produto = todosProdutos.First(p => string.Equals(p.CodigoDeBarra, item.CodigoDeBarra.Trim(), StringComparison.OrdinalIgnoreCase));
                 if (item.Quantidade <= 0) throw new Exception("Quantidade deve ser maior que zero.");
-                pedido.PedidoProdutos.Add(new PedidoProduto
+                novos.Add(new PedidoProduto
                 {
                     PedidoId = pedido.Id,
                     ProdutoId = produto.Id,
@@ -132,7 +141,52 @@ namespace Dunder_Store.Services
                 });
             }
 
-            await _pedidoRepository.UpdateAsync(pedido);
+            await _pedidoProdutoRepository.AddRangeAsync(novos);
+        }
+
+        public async Task AtualizarItensAsync(Guid pedidoId, List<(Guid? ProdutoId, string? CodigoDeBarra, int Quantidade)> itens)
+        {
+            var pedido = await _pedidoRepository.GetDetalhadoByIdAsync(pedidoId);
+            if (pedido == null) throw new Exception("Pedido não encontrado.");
+            if (pedido.Status != PedidoStatus.Carrinho) throw new Exception("Não é possível alterar um pedido que já foi finalizado.");
+            if (itens == null) throw new Exception("É necessário enviar a lista de produtos.");
+
+            if (itens.Count == 0)
+            {
+                pedido.PedidoProdutos.Clear();
+                await _pedidoRepository.UpdateAsync(pedido);
+                return;
+            }
+
+            await _pedidoProdutoRepository.RemoverPorPedidoIdAsync(pedido.Id);
+
+            foreach (var item in itens)
+            {
+                Produto? produto = null;
+                if (item.ProdutoId.HasValue)
+                {
+                    produto = await _produtoRepository.GetByIdAsync(item.ProdutoId.Value);
+                }
+                else if (!string.IsNullOrWhiteSpace(item.CodigoDeBarra))
+                {
+                    var codigo = item.CodigoDeBarra.Trim();
+                    produto = await _produtoRepository.GetByCodigoDeBarraAsync(codigo);
+                }
+
+                if (produto == null) throw new Exception("Produto não encontrado.");
+                if (item.Quantidade <= 0) throw new Exception("Quantidade deve ser maior que zero.");
+
+                var novo = new PedidoProduto
+                {
+                    PedidoId = pedido.Id,
+                    ProdutoId = produto.Id,
+                    Produto = produto,
+                    Quantidade = item.Quantidade,
+                    PrecoUnitario = 0m
+                };
+                await _pedidoProdutoRepository.AddRangeAsync(new[] { novo });
+            }
+            // opcional: atualizar pedido para recalcular totals em futuras operações
         }
 
         public async Task AtualizarCupomAsync(Guid pedidoId, string? cupomCodigo)
@@ -141,6 +195,7 @@ namespace Dunder_Store.Services
             if (pedido == null) throw new Exception("Pedido não encontrado.");
             if (pedido.Status != PedidoStatus.Carrinho) throw new Exception("Não é possível alterar um pedido já finalizado.");
 
+            // Evita conflito de rastreamento: sempre manipular via FK e limpar navegação
             if (string.IsNullOrWhiteSpace(cupomCodigo))
             {
                 pedido.CupomId = null;
@@ -152,7 +207,7 @@ namespace Dunder_Store.Services
                 if (cupom == null || !cupom.Ativo || cupom.DataExpiracao < DateTime.Now)
                     throw new Exception("Cupom inválido ou expirado.");
                 pedido.CupomId = cupom.Id;
-                pedido.Cupom = cupom;
+                pedido.Cupom = null;
             }
 
             await _pedidoRepository.UpdateAsync(pedido);
@@ -174,7 +229,9 @@ namespace Dunder_Store.Services
             if (pedido.Status != PedidoStatus.Carrinho) throw new Exception("Pedido já está finalizado.");
             foreach (var item in pedido.PedidoProdutos)
             {
-                item.PrecoUnitario = item.Produto.Preco;
+                item.PrecoUnitario = item.Produto?.Preco ?? item.PrecoUnitario;
+                item.ProdutoNome = item.Produto?.Nome ?? item.ProdutoNome;
+                item.ProdutoCodigoDeBarra = item.Produto?.CodigoDeBarra ?? item.ProdutoCodigoDeBarra;
             }
             pedido.Status = PedidoStatus.Finalizado;
             pedido.DataPedido = DateTime.Now;
@@ -216,9 +273,8 @@ namespace Dunder_Store.Services
 
         private async Task<Produto?> FindProdutoByCodigoAsync(string codigo)
         {
-            // Não há método direto no repositório, busca por todos e filtra
-            var pagina = await _produtoRepository.GetAllAsync(null, null, null, null, null, null, 1, int.MaxValue);
-            return pagina.Itens.FirstOrDefault(p => string.Equals(p.CodigoDeBarra, codigo, StringComparison.OrdinalIgnoreCase));
+            var c = codigo.Trim();
+            return await _produtoRepository.GetByCodigoDeBarraAsync(c);
         }
     }
 }

@@ -13,6 +13,7 @@ namespace Dunder_Store.Interfaces.IServices
         Task<Pedido> CriarPedidoAsync(string clienteCpf, List<(string CodigoDeBarra, int Quantidade)> itens, string? cupomCodigo, decimal? freteValor);
 
         Task AtualizarItensAsync(Guid pedidoId, List<(string CodigoDeBarra, int Quantidade)> itens);
+        Task AtualizarItensAsync(Guid pedidoId, List<(Guid? ProdutoId, string? CodigoDeBarra, int Quantidade)> itens);
         Task AtualizarCupomAsync(Guid pedidoId, string? cupomCodigo);
         Task AtualizarFreteAsync(Guid pedidoId, decimal? freteValor);
         Task FinalizarPedidoAsync(Guid id);

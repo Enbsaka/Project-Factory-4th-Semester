@@ -42,12 +42,13 @@ function emitBuscar() {
 
 // Debounce para busca (evita requisição a cada tecla)
 let debounceTimer = null;
-function onInputDebounced() {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    emitBuscar();
-  }, 300);
-}
+  function onInputDebounced(val) {
+    localBusca.value = val ?? "";
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      emitBuscar();
+    }, 300);
+  }
 
 // Mantém sincronização entre pai e componente
 watch(
