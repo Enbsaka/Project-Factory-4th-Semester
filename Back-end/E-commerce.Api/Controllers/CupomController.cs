@@ -52,15 +52,7 @@ namespace Dunder_Store.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AtualizarCupom(Guid id, [FromForm] CupomPatchDTO dto)
         {
-            var cupom = await _cupomService.GetByIdAsync(id);
-            if (cupom == null) return NotFound("Cupom não encontrado.");
-
-            cupom.Codigo = dto.Codigo?.Trim().ToUpper() ?? cupom.Codigo;
-            cupom.DescontoPercentual = dto.DescontoPercentual ?? cupom.DescontoPercentual;
-            cupom.DataExpiracao = dto.DataExpiracao ?? cupom.DataExpiracao;
-            cupom.Ativo = dto.Ativo ?? cupom.Ativo;
-
-            var atualizado = await _cupomService.AtualizarCupomAsync(cupom);
+            var atualizado = await _cupomService.AtualizarCupomComPatchAsync(id, dto);
             if (!atualizado) return BadRequest("Erro ao atualizar o cupom.");
 
             return NoContent();

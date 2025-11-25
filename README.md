@@ -1,4 +1,4 @@
-# Dunder Store (Fábrica de Projetos Ágeis IV)
+# Ecommerce‑Tech (Fábrica de Projetos Ágeis IV)
 
 Projeto de comércio eletrônico focado em produtos tecnológicos, desenvolvido como parte da Fábrica de Códigos IV.
 

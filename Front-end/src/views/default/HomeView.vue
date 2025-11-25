@@ -42,9 +42,9 @@
   
 
 
-  <!-- Resultados da Busca removidos (usamos SearchView) -->
+ 
 
-  <!-- Lista rápida de produtos com link Ver mais -->
+
   <section class="text-center py-10 px-6 md:px-20">
     <h2 class="text-3xl font-bold text-gray-900 mb-3">Produtos</h2>
     <p class="text-gray-600 mb-8 max-w-2xl mx-auto">Confira alguns itens disponíveis na loja</p>
@@ -91,7 +91,7 @@ const categoriaImagens = {
   jeans: new URL("../../assets/categorias/Jeans.png", import.meta.url).href,
 };
 
-// Hero dedicado: se houver arquivos em assets/hero, prefere esses; senão, usa imagens de categoria
+
 let heroImagens = {};
 try {
   const heroFiles = import.meta.glob("../../assets/hero/*", { eager: true, import: "default", query: "?url" });
@@ -103,7 +103,7 @@ try {
   }, {});
 } catch {}
 
-// === Dados locais ===
+
 const heroSlidesConfig = [
   { key: 'masculino', title: 'Moda Masculina', subtitle: 'Ofertas em tênis e camisetas', query: 'masculino' },
   { key: 'feminino', title: 'Moda Feminina', subtitle: 'Ofertas em sandálias e vestidos', query: 'feminino' },
@@ -173,25 +173,25 @@ const benefits = [
   },
 ];
 
-// === Estado ===
+
 const categoriasPrincipais = ref([]);
 const produtosHome = ref([]);
 
-// === Funções ===
+
 const getCategoriaImage = (nome) => {
   const key = nome.toLowerCase();
   return categoriaImagens[key] || placeholderImg;
 };
 
-// === Requisições ===
+
 const fetchCategorias = async () => {
   const { data } = await api.get("/categoria");
 
-  // Monta mapa de categorias
+
   const mapa = {};
   data.forEach((cat) => (mapa[cat.id] = { ...cat, subcategorias: [] }));
 
-  // Conecta pais e filhos
+
   const categoriasRaiz = [];
   data.forEach((cat) => {
     if (cat.categoriaPaiId) {
@@ -216,7 +216,7 @@ onMounted(() => {
   buildSlides();
 });
 
-// Garante slides iniciais para evitar avisos do Swiper antes do onMounted
+
 buildSlides();
 </script>
 

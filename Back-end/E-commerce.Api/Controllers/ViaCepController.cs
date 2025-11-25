@@ -1,4 +1,4 @@
-﻿using Dunder_Store.E_commerce.Business.DTO;
+using Dunder_Store.E_commerce.Business.DTO;
 using Dunder_Store.E_commerce.Business.Interfaces.IServices;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,9 +21,6 @@ namespace Dunder_Store.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetEndereco(string cep)
         {
-            if (string.IsNullOrWhiteSpace(cep) || cep.Replace("-", "").Trim().Length != 8)
-                return BadRequest("CEP inválido. Formato esperado: 8 dígitos.");
-
             var endereco = await _viaCepService.BuscarEnderecoPorCepAsync(cep);
             if (endereco == null || string.IsNullOrWhiteSpace(endereco.Uf))
                 return NotFound("Endereço não encontrado para o CEP informado.");

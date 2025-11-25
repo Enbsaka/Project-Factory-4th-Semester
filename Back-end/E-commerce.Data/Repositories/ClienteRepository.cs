@@ -29,6 +29,11 @@ namespace Dunder_Store.Data.Repositories
             return await _dbContext.Clientes.FirstOrDefaultAsync(c => c.Cpf == cpf);
         }
 
+        public async Task<Cliente?> GetByEmailAndSenhaAsync(string email, string senha)
+        {
+            return await _dbContext.Clientes.FirstOrDefaultAsync(c => c.Email == email && c.Senha == senha);
+        }
+
         public async Task AddAsync(Cliente cliente)
         {
             await _dbContext.Clientes.AddAsync(cliente);

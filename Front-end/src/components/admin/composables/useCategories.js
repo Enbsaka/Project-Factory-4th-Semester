@@ -3,31 +3,31 @@ import { useNotifications } from "./useNotifications.js";
 import categoriaService from "../../../services/categoriaService.js";
 import api from "../../../services/api.js";
 
-// Composable para gestão de categorias no admin: listagem, busca, filtros e paginação
+
 export function useCategories() {
-  // Estado
-  const categoriasTree = ref([]); // árvore para dropdown
-  const categoriasRaw = ref([]); // lista simples do endpoint /categoria
+  
+  const categoriasTree = ref([]); 
+  const categoriasRaw = ref([]); 
   const carregando = ref(false);
   const erro = ref(null);
 
-  // Filtros e paginação
+  
   const busca = ref("");
-  const filtroCategorias = ref([]); // lista de IDs (pais e/ou subs)
+  const filtroCategorias = ref([]); 
   const mostrarApenasPais = ref(false);
   const mostrarApenasSubs = ref(false);
   const paginaAtual = ref(1);
   const itensPorPagina = ref(10);
 
-  // Seleção e modais
+ 
   const categoriaSelecionada = ref(null);
   const modalEditarAberto = ref(false);
   const modalExcluirAberto = ref(false);
   const modalNovaSubAberto = ref(false);
-  // Notificações
+
   const { notificacao, show } = useNotifications();
 
-  // Helpers
+
   function normalizarCategoria(c) {
     const id = c.id ?? c.Id;
     const nome = c.nome ?? c.Nome;
@@ -35,7 +35,7 @@ export function useCategories() {
     return { id, nome, categoriaPaiId: paiId };
   }
 
-  // Carrega árvore (para filtros) e lista plana (para tabela)
+ 
   async function carregarCategorias() {
     try {
       carregando.value = true;
@@ -58,10 +58,10 @@ export function useCategories() {
     }
   }
 
-  // Mapa de nome do pai para exibição
+
   const nomePaiPorId = computed(() => {
     const map = new Map();
-    // da árvore
+
     function caminhar(nodes, paiId = null) {
       for (const n of nodes || []) {
         map.set(n.id ?? n.Id, paiId);
@@ -69,7 +69,7 @@ export function useCategories() {
       }
     }
     caminhar(categoriasTree.value);
-    // completa com flat
+
     categoriasRaw.value.forEach((c) => {
       map.set(c.id, c.categoriaPaiId ?? null);
     });
@@ -91,7 +91,7 @@ export function useCategories() {
     return map;
   });
 
-  // Flatten para tabela, com contagem de produtos da árvore
+
   function contarProdutos(node) {
     let total = (node.produtos?.length ?? 0);
     (node.subcategorias || []).forEach((c) => {
@@ -113,7 +113,7 @@ export function useCategories() {
     return map;
   });
 
-  // Busca nó na árvore por id
+ 
   function encontrarNoPorId(id, nodes = categoriasTree.value) {
     for (const n of nodes || []) {
       const nid = n.id ?? n.Id;
@@ -125,7 +125,7 @@ export function useCategories() {
   }
 
   const categoriasTabela = computed(() => {
-    // base flat
+
     const base = categoriasRaw.value.map((c) => ({
       id: c.id,
       nome: c.nomeCategoria,
@@ -135,7 +135,7 @@ export function useCategories() {
       totalProdutos: produtosPorCategoriaId.value.get(c.id) ?? c.totalProdutos ?? 0,
     }));
 
-    // filtros
+   
     let filtradas = base;
     if (busca.value?.trim()) {
       const termo = busca.value.trim().toLowerCase();
@@ -152,7 +152,7 @@ export function useCategories() {
       filtradas = filtradas.filter((c) => !!c.categoriaPaiId);
     }
 
-    // paginação
+
     const total = filtradas.length;
     const totalPaginas = Math.max(1, Math.ceil(total / itensPorPagina.value));
     if (paginaAtual.value > totalPaginas) paginaAtual.value = totalPaginas;
@@ -178,7 +178,7 @@ export function useCategories() {
     paginaAtual.value = 1;
   }
 
-  // Ações
+ 
   async function salvarCategoria(id, { nome, categoriaPaiId }) {
     try {
       await categoriaService.update(id, { nome, categoriaPaiId });
@@ -198,7 +198,7 @@ export function useCategories() {
 
   async function excluirCategoria(id) {
     try {
-      // Bloqueia exclusão de categorias pai que possuem subcategorias
+
       const no = encontrarNoPorId(id);
       if (no && Array.isArray(no.subcategorias) && no.subcategorias.length > 0) {
         show("Não é possível excluir uma categoria pai com subcategorias.", "error");
@@ -237,7 +237,7 @@ export function useCategories() {
     }
   }
 
-  // Controle de modais
+
   function abrirModalEditar(categoria) {
     categoriaSelecionada.value = { ...categoria };
     modalEditarAberto.value = true;
@@ -256,23 +256,23 @@ export function useCategories() {
   });
 
   return {
-    // estado
+
     categoriasTree,
     categoriasRaw,
     carregando,
     erro,
-    // filtros
+
     busca,
     filtroCategorias,
     mostrarApenasPais,
     mostrarApenasSubs,
     paginaAtual,
     itensPorPagina,
-    // tabela
+
     categoriasTabela,
     mudarPagina,
     mudarItensPorPagina,
-    // modais
+
     categoriaSelecionada,
     modalEditarAberto,
     modalExcluirAberto,
@@ -280,12 +280,12 @@ export function useCategories() {
     abrirModalEditar,
     abrirModalExcluir,
     abrirModalNovaSub,
-    // ações
+
     salvarCategoria,
     excluirCategoria,
     criarSubcategoria,
     notificacao,
-    // carregar
+   
     carregarCategorias,
   };
 }

@@ -104,7 +104,7 @@ namespace Dunder_Store.Services
             if (pedido.Status != PedidoStatus.Carrinho) throw new Exception("Não é possível alterar um pedido que já foi finalizado.");
             if (itens == null) throw new Exception("É necessário enviar a lista de produtos.");
 
-            // Suporte a limpar carrinho quando lista vazia for enviada
+            
             if (itens.Count == 0)
             {
                 pedido.PedidoProdutos.Clear();
@@ -112,12 +112,12 @@ namespace Dunder_Store.Services
                 return;
             }
 
-            // Remove itens atuais diretamente no repositório para evitar conflitos de rastreamento
+            
             await _pedidoProdutoRepository.RemoverPorPedidoIdAsync(pedido.Id);
 
-            // Mapeia códigos enviados para produtos
+            
             var codigos = itens.Select(i => i.CodigoDeBarra.Trim()).ToList();
-            // Carrega todos produtos correspondentes
+            
             var todosProdutos = new List<Produto>();
             foreach (var codigo in codigos.Distinct())
             {

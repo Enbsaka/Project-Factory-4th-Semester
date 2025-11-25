@@ -254,10 +254,7 @@ namespace Dunder_Store.Controllers
             }
             try
             {
-                if (pedidoAtualizadoDTO.produtos == null)
-                    return BadRequest("É necessário enviar a lista de produtos.");
-
-                var itensFlex = pedidoAtualizadoDTO.produtos
+                var itensFlex = (pedidoAtualizadoDTO.produtos ?? new List<Dunder_Store.DTO.PedidoProdutoDTO>())
                     .Select(p => (p.ProdutoId, string.IsNullOrWhiteSpace(p.CodigoDeBarra) ? null : p.CodigoDeBarra, p.Quantidade))
                     .ToList();
                 await _pedidoService.AtualizarItensAsync(id, itensFlex);

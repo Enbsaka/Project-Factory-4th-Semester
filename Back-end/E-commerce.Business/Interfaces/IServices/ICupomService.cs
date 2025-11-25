@@ -1,4 +1,4 @@
-﻿using Dunder_Store.Entities;
+using Dunder_Store.Entities;
 
 namespace Dunder_Store.Interfaces.IServices
 {
@@ -10,5 +10,6 @@ namespace Dunder_Store.Interfaces.IServices
         Task<IEnumerable<Cupom>> GetAllAsync();
         Task<bool> AtualizarCupomAsync(Cupom cupom);
         Task<bool> RemoverCupomAsync(Guid id);
+        Task<bool> AtualizarCupomComPatchAsync(Guid id, DTO.CupomPatchDTO dto);
     }
 }

@@ -20,6 +20,7 @@
             <span>{{ v.nome }} — {{ v.preco }}</span>
             <div class="flex gap-2">
               <button @click="iniciarEdicao(v)" class="text-blue-600 hover:underline text-sm">Editar</button>
+              <button @click="excluirVariacao(v.id)" class="text-red-600 hover:underline text-sm">Excluir</button>
             </div>
           </div>
           <div v-if="editandoId === v.id" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -205,6 +206,16 @@ async function salvarEdicao(variacaoId) {
     if (edicao.novaImagem) formData.append("novaImagem", edicao.novaImagem);
     await productService.update(variacaoId, formData);
     cancelarEdicao();
+    await carregarVariacoes();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function excluirVariacao(variacaoId) {
+  try {
+    await productService.remove(variacaoId);
+    if (editandoId.value === variacaoId) cancelarEdicao();
     await carregarVariacoes();
   } catch (e) {
     console.error(e);

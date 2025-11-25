@@ -80,10 +80,6 @@ namespace Dunder_Store.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ClienteDTOOutput>> CreateCliente([FromForm] ClienteDTOInput novoClienteDTO)
         {
-            var clientes = await _clienteService.GetAllAsync();
-            if (clientes.Count(c => c.Cpf == novoClienteDTO.Cpf) > 0)
-                return BadRequest("Já existe um cliente com este CPF");
-
             var novoCliente = new Cliente(
                 novoClienteDTO.Nome,
                 novoClienteDTO.Cpf,
@@ -95,26 +91,30 @@ namespace Dunder_Store.Controllers
                 novoClienteDTO.Bairro,
                 novoClienteDTO.Localidade,
                 novoClienteDTO.Uf
-            );
+            )
+            {
+                IsAdmin = novoClienteDTO.IsAdmin ?? false
+            };
 
-            var solicitarAdmin = novoClienteDTO.IsAdmin ?? false;
             var usuarioEhAdmin = User?.IsInRole("Admin") ?? false;
-            novoCliente.IsAdmin = solicitarAdmin && usuarioEhAdmin;
-
-            await _clienteService.CriarClienteAsync(novoCliente);
-
-            var clienteDTO = new ClienteDTOOutput(novoCliente.Id, novoCliente.Nome, novoCliente.Cpf, novoCliente.Email, novoCliente.Senha, novoCliente.Cep, novoCliente.NumEndereco,
-                novoCliente.Logradouro ?? string.Empty, novoCliente.Bairro ?? string.Empty, novoCliente.Localidade ?? string.Empty, novoCliente.Uf ?? string.Empty, novoCliente.IsAdmin, novoCliente.DataCadastro);
-            return CreatedAtAction(nameof(GetClienteId), new { id = novoCliente.Id }, clienteDTO);
+            try
+            {
+                var criado = await _clienteService.CriarClienteComRegrasAsync(novoCliente, usuarioEhAdmin);
+                var clienteDTO = new ClienteDTOOutput(criado.Id, criado.Nome, criado.Cpf, criado.Email, criado.Senha, criado.Cep, criado.NumEndereco,
+                    criado.Logradouro ?? string.Empty, criado.Bairro ?? string.Empty, criado.Localidade ?? string.Empty, criado.Uf ?? string.Empty, criado.IsAdmin, criado.DataCadastro);
+                return CreatedAtAction(nameof(GetClienteId), new { id = criado.Id }, clienteDTO);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<ActionResult<ClienteDTOOutput>> LoginCliente([FromForm] LoginDTO loginDTO)
         {
-            var clientes = await _clienteService.GetAllAsync();
-            var cliente = clientes.FirstOrDefault(c => c.Email == loginDTO.Email && c.Senha == loginDTO.Senha);
-
+            var cliente = await _clienteService.AutenticarAsync(loginDTO.Email, loginDTO.Senha);
             if (cliente == null)
                 return Unauthorized("Email ou senha inválidos");
 
@@ -144,31 +144,15 @@ namespace Dunder_Store.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateCliente(Guid id, ClienteDTOInput clienteAtualizadoDTO)
         {
-            var cliente = await _clienteService.GetByIdAsync(id);
-            if (cliente == null)
-                return NotFound();
-
-            var clientes = await _clienteService.GetAllAsync();
-            if (clientes.Count(c => c.Id != id && c.Cpf == clienteAtualizadoDTO.Cpf) > 0)
-                return BadRequest("Já existe um cliente com esse CPF");
-
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Nome)) cliente.Nome = clienteAtualizadoDTO.Nome;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Cpf)) cliente.Cpf = clienteAtualizadoDTO.Cpf;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Email)) cliente.Email = clienteAtualizadoDTO.Email;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Senha)) cliente.Senha = clienteAtualizadoDTO.Senha;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Cep)) cliente.Cep = clienteAtualizadoDTO.Cep;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.NumEndereco)) cliente.NumEndereco = clienteAtualizadoDTO.NumEndereco;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Logradouro)) cliente.Logradouro = clienteAtualizadoDTO.Logradouro;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Bairro)) cliente.Bairro = clienteAtualizadoDTO.Bairro;
-
-
-            if (clienteAtualizadoDTO.IsAdmin.HasValue)
-                cliente.IsAdmin = clienteAtualizadoDTO.IsAdmin.Value;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Localidade)) cliente.Localidade = clienteAtualizadoDTO.Localidade;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Uf)) cliente.Uf = clienteAtualizadoDTO.Uf;
-
-            await _clienteService.AtualizarClienteAsync(cliente);
-            return NoContent();
+            try
+            {
+                await _clienteService.AtualizarClienteComRegrasAsync(id, clienteAtualizadoDTO);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPatch("me")]
@@ -179,51 +163,31 @@ namespace Dunder_Store.Controllers
             if (userId == null)
                 return Unauthorized();
 
-            var cliente = await _clienteService.GetByIdAsync(userId.Value);
-            if (cliente == null)
-                return NotFound();
-
-            var clientes = await _clienteService.GetAllAsync();
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Cpf) && clientes.Count(c => c.Id != userId.Value && c.Cpf == clienteAtualizadoDTO.Cpf) > 0)
-                return BadRequest("Já existe um cliente com esse CPF");
-
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Nome)) cliente.Nome = clienteAtualizadoDTO.Nome;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Cpf)) cliente.Cpf = clienteAtualizadoDTO.Cpf;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Email)) cliente.Email = clienteAtualizadoDTO.Email;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Senha)) cliente.Senha = clienteAtualizadoDTO.Senha;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Cep)) cliente.Cep = clienteAtualizadoDTO.Cep;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.NumEndereco)) cliente.NumEndereco = clienteAtualizadoDTO.NumEndereco;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Logradouro)) cliente.Logradouro = clienteAtualizadoDTO.Logradouro;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Bairro)) cliente.Bairro = clienteAtualizadoDTO.Bairro;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Localidade)) cliente.Localidade = clienteAtualizadoDTO.Localidade;
-            if (!string.IsNullOrWhiteSpace(clienteAtualizadoDTO.Uf)) cliente.Uf = clienteAtualizadoDTO.Uf;
-
-            await _clienteService.AtualizarClienteAsync(cliente);
-            return NoContent();
+            try
+            {
+                await _clienteService.AtualizarMeuPerfilComRegrasAsync(userId.Value, clienteAtualizadoDTO);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpDelete("{id:guid}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCliente(Guid id)
         {
-            var cliente = await _clienteService.GetByIdAsync(id);
-            if (cliente == null)
-                return NotFound("Cliente não encontrado.");
-
-            var pedidosDoCliente = await _pedidoService.GetPedidosPorClienteAsync(id, null, 1, int.MaxValue);
-
-            // Política: preservar receita e histórico
-            // Se o cliente possui pedidos finalizados, bloqueia a deleção do cliente
-            var possuiFinalizados = pedidosDoCliente.Itens.Any(p => p.Status == Entities.PedidoStatus.Finalizado);
-            if (possuiFinalizados)
+            try
             {
-                return BadRequest("Cliente possui pedidos finalizados; não é possível deletar o cliente.");
+                await _clienteService.RemoverClienteComRegrasAsync(id);
+                return NoContent();
             }
-
-            await _pedidoService.RemoverPedidosClienteAsync(id);
-            await _clienteService.RemoverClienteAsync(id);
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("não encontrado")) return NotFound(ex.Message);
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

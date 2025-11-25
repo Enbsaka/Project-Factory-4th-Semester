@@ -4,10 +4,12 @@ using Dunder_Store.Interfaces.IServices;
 
 namespace Dunder_Store.Services
 {
-    public class ProdutoService(IProdutoRepository produtoRepository, IPedidoProdutoRepository pedidoProdutoRepository) : IProdutoService
+    public class ProdutoService(IProdutoRepository produtoRepository, IPedidoProdutoRepository pedidoProdutoRepository, ICategoriaService categoriaService, IFileStorageService fileStorage) : IProdutoService
     {
         private readonly IProdutoRepository _produtoRepository = produtoRepository;
         private readonly IPedidoProdutoRepository _pedidoProdutoRepository = pedidoProdutoRepository;
+        private readonly ICategoriaService _categoriaService = categoriaService;
+        private readonly IFileStorageService _fileStorage = fileStorage;
 
         public async Task<Paginador<Produto>> GetAllAsync(string? nome = null, string? cor = null, string? tamanho = null,
             string? categoria = null, Guid? categoriaId = null, Guid[]? categoriaIds = null, int pagina = 1, int itensPorPagina = 10)
@@ -42,6 +44,28 @@ namespace Dunder_Store.Services
 
             await _produtoRepository.AddAsync(produto);
             return produto;
+        }
+
+        public async Task<Produto> CriarProdutoComImagemAsync(Produto novo, Stream? imagemStream, string? imagemFileName, string baseUrl)
+        {
+            if (novo.ProdutoPaiId.HasValue)
+            {
+                var pai = await _produtoRepository.GetByIdAsync(novo.ProdutoPaiId.Value);
+                if (pai == null) throw new Exception("Produto pai não existe.");
+            }
+            if (novo.CategoriaId == Guid.Empty)
+                throw new Exception("Categoria obrigatória.");
+
+            var subcats = await _categoriaService.GetSubcategoriasAsync(novo.CategoriaId);
+            if (subcats != null && subcats.Count > 0)
+                throw new Exception("Produtos devem ser cadastrados apenas em subcategorias (folhas).");
+
+            if (imagemStream == null)
+                throw new Exception("Imagem obrigatória para produto base.");
+
+            novo.ImagemURL = _fileStorage.SaveProductImage(imagemStream, imagemFileName ?? "imagem.png", null, baseUrl);
+
+            return await CriarProdutoAsync(novo);
         }
 
         private static string IncrementBase12(string base12)
@@ -103,6 +127,23 @@ namespace Dunder_Store.Services
                     await _produtoRepository.UpdateAsync(v);
                 }
             }
+        }
+
+        public async Task AtualizarProdutoComImagemAsync(Produto existente, Stream? novaImagemStream, string? novaImagemFileName, string baseUrl)
+        {
+            if (existente.CategoriaId != Guid.Empty)
+            {
+                var subcatsUpdate = await _categoriaService.GetSubcategoriasAsync(existente.CategoriaId);
+                if (subcatsUpdate != null && subcatsUpdate.Count > 0)
+                    throw new Exception("Produtos devem estar vinculados a subcategorias (folhas).");
+            }
+
+            if (novaImagemStream != null)
+            {
+                existente.ImagemURL = _fileStorage.SaveProductImage(novaImagemStream, novaImagemFileName ?? "imagem.png", existente.ImagemURL, baseUrl);
+            }
+
+            await AtualizarProdutoAsync(existente);
         }
 
         public async Task RemoverTodosProdutosAsync()

@@ -10,6 +10,8 @@ namespace Dunder_Store.Interfaces.IServices
         Task<Produto?> GetByIdAsync(Guid id);
         Task<Produto> CriarProdutoAsync(Produto produto);
         Task AtualizarProdutoAsync(Produto produto);
+        Task<Produto> CriarProdutoComImagemAsync(Produto produto, System.IO.Stream? imagemStream, string? imagemFileName, string baseUrl);
+        Task AtualizarProdutoComImagemAsync(Produto produto, System.IO.Stream? novaImagemStream, string? novaImagemFileName, string baseUrl);
         Task RemoverProdutoAsync(Guid id);
 
         Task RemoverTodosProdutosAsync();

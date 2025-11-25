@@ -9,6 +9,7 @@ using Dunder_Store.Interfaces.IRepositories;
 using Dunder_Store.Interfaces.IServices;
 using Dunder_Store.Repositories;
 using Dunder_Store.Services;
+using Dunder_Store.Data.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -99,6 +100,8 @@ namespace Dunder_Store
             builder.Services.AddScoped<IClienteService, ClienteService>();
             builder.Services.AddScoped<ICategoriaService, CategoriaService>();
             builder.Services.AddScoped<ICupomService, CupomService>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
 
             builder.Services.AddHttpClient<IViaCepService, ViaCepService>();
