@@ -56,9 +56,6 @@ namespace Dunder_Store.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromForm] CategoriaDTO dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             try
             {
                 var categoria = await _categoriaService.CriarCategoriaAsync(dto);
@@ -74,9 +71,6 @@ namespace Dunder_Store.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromForm] CategoriaDTO dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             try
             {
                 await _categoriaService.AtualizarCategoriaAsync(id, dto);
