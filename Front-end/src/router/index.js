@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-
-// ==== PÁGINAS DO CLIENTE ====
 import HomeView from "../views/default/HomeView.vue";
 import CategoryView from "../views/default/CategoryView.vue";
 import ProductView from "../views/default/ProductView.vue";
@@ -8,11 +6,8 @@ import ProductsListView from "../views/default/ProductsListView.vue";
 import CartView from "../views/default/CartView.vue";
 import CheckoutView from "../views/default/CheckoutView.vue";
 import SearchView from "../views/default/SearchView.vue";
-// Rotas logadas
 import LoginClientView from "../views/LoginClientView.vue";
 import RegisterView from "../views/RegisterView.vue";
-
-// ==== PÁGINAS DO ADMIN ====
 import LoginAdminView from "../views/admin/LoginAdminView.vue";
 import DashboardAdminView from '../views/admin/DashboardAdminView.vue';
 import ProductsAdminView from '../views/admin/ProductsAdminView.vue';
@@ -20,12 +15,9 @@ import OrdersAdminView from '../views/admin/OrdersAdminView.vue';
 import ClientsAdminView from '../views/admin/ClientsAdminView.vue';
 import CouponAdminView from '../views/admin/CouponAdminView.vue';
 import CategoriesAdminView from '../views/admin/CategoriesAdminView.vue';
-
-// ==== ROTAS ====
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // ==== SITE PÚBLICO ====
     {
       path: "/",
       name: "home",
@@ -82,7 +74,6 @@ const router = createRouter({
       meta: { layout: "client" },
     },
 
-    // ==== ÁREA LOGADA ====
     {
       path: "/app",
       name: "homeLogged",
@@ -101,8 +92,6 @@ const router = createRouter({
       component: SearchView,
       meta: { layout: "client", requiresAuth: true },
     },
-    // Rota de perfil removida conforme solicitação
-
     {
       path: "/login",
       name: "loginCliente",
@@ -116,7 +105,6 @@ const router = createRouter({
       meta: { layout: "client" },
     },
 
-    // ==== ADMIN ====
     {
       path: "/admin/login",
       name: "login",
@@ -161,34 +149,24 @@ const router = createRouter({
     },
   ],
 });
-
-// Guarda de navegação
+// Guarda de navegação: protege rotas por papel e autenticação
 router.beforeEach((to, from, next) => {
   const isLogged = !!localStorage.getItem('token');
   const role = localStorage.getItem('role') || '';
-
-  // Protege rotas do admin: exige login com papel 'admin'
   if (to.meta?.layout === 'admin') {
     if (!isLogged || role !== 'admin') {
       return next({ name: 'login' });
     }
   }
-
-  // Protege rotas que exigem login
   if (to.meta?.requiresAuth && !isLogged) {
     return next({ name: 'loginCliente' });
   }
-
-  // Usuario logado indo para home pública => redireciona para /app
   if (to.name === 'home' && isLogged) {
     return next({ name: 'homeLogged' });
   }
-
-  // Evita carrinho para não logados
   if (to.name === 'cart' && !isLogged) {
     return next({ name: 'loginCliente' });
   }
-  // Evita checkout sem login
   if ((to.name === 'checkout' || to.name === 'checkoutCart' || to.name === 'checkoutConfirm' || to.name === 'checkoutCartConfirm') && !isLogged) {
     return next({ name: 'loginCliente' });
   }

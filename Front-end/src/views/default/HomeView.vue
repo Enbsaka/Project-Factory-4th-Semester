@@ -26,7 +26,6 @@
     </div>
   </section>
 
-  <!-- Benefícios -->
   <section class="bg-white py-14 px-6 md:px-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 text-center">
     <div
       v-for="(benefit, i) in benefits"
@@ -38,13 +37,6 @@
       <p class="text-gray-500">{{ benefit.description }}</p>
     </div>
   </section>
-
-  
-
-
- 
-
-
   <section class="text-center py-10 px-6 md:px-20">
     <h2 class="text-3xl font-bold text-gray-900 mb-3">Produtos</h2>
     <p class="text-gray-600 mb-8 max-w-2xl mx-auto">Confira alguns itens disponíveis na loja</p>

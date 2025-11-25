@@ -1,6 +1,5 @@
 <template>
   <main class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 py-10 px-6">
-    <!-- Galeria de imagens -->
     <div class="flex flex-col items-center lg:w-1/2">
       <div class="border rounded-lg overflow-hidden bg-white">
         <img
@@ -23,7 +22,6 @@
       </div>
     </div>
 
-    <!-- Detalhes do produto -->
     <div class="lg:w-1/2 flex flex-col gap-6">
       <div>
         <h1 class="text-2xl font-semibold text-gray-900">{{ produto?.nome || 'Carregando...' }}</h1>
@@ -48,7 +46,6 @@
         >{{ mostrarDescricaoCompleta ? 'Ver menos' : 'Ver mais' }}</button>
       </div>
 
-      <!-- Variações -->
       <div v-if="variacoes.length" class="space-y-4">
         <div>
           <h3 class="text-sm font-medium text-gray-700 mb-2">Cor</h3>
@@ -108,7 +105,6 @@
         >Continuar Comprando</RouterLink>
       </div>
 
-      <!-- Quantidade por variação -->
       <div v-if="variacoes.length" class="mt-4 space-y-3">
         <h3 class="text-sm font-medium text-gray-700">Quantidades por variação</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -194,7 +190,6 @@ const tamanhosDisponiveis = computed(() => {
 });
 
 function selecionarCor(cor) {
-  // Permite desmarcar clicando na mesma opção
   if (corSelecionada.value === cor) {
     corSelecionada.value = null;
     sincronizarVariacaoSelecionada(true);
@@ -239,7 +234,6 @@ function nomeVariacao(v) {
 function limparSelecao() {
   corSelecionada.value = null;
   tamanhoSelecionado.value = null;
-  // Recarrega produto original (pai)
   carregarProduto();
 }
 
@@ -262,7 +256,6 @@ async function carregarProduto() {
   produto.value = data;
   selectedImage.value = data.imagemUrl || data.imagemURL || null;
 
-  // Se for pai, variacoes vêm junto; se for filho, buscar o pai para obter todas
   if (Array.isArray(data.variacoes) && data.variacoes.length) {
     variacoes.value = data.variacoes;
   } else if (data.produtoPaiId) {
@@ -272,7 +265,6 @@ async function carregarProduto() {
     } catch { /* silencioso */ }
   }
 
-  // Monta galeria simples (imagem principal + imagens das variações, se houver)
   const imagens = [];
   const principal = data.imagemUrl || data.imagemURL;
   if (principal) imagens.push(principal);
@@ -282,7 +274,6 @@ async function carregarProduto() {
   });
   galeria.value = Array.from(new Set(imagens));
 
-  // Inicializa matriz de quantidades por variação
   variacaoQuantidades.value = (variacoes.value || []).map(v => ({
     produtoId: v.id || v.Id,
     codigoDeBarra: v.codigoDeBarra || v.CodigoDeBarra,
@@ -295,7 +286,6 @@ async function carregarProduto() {
 onMounted(carregarProduto);
 watch(() => route.params.id, carregarProduto);
 
-// Desabilita botões apenas quando HÁ variações e nenhuma seleção/quantidade
 const botaoDesabilitado = computed(() => {
   const haVariacoes = (variacoes.value || []).length > 0;
   if (!haVariacoes) return false;

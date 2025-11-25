@@ -1,4 +1,3 @@
-// src/services/productService.js
 import api from "./api";
 const RESOURCE = "/produto";
 
@@ -14,7 +13,6 @@ async function getAll({
   itensPorPagina = 10,
 } = {}) {
   try {
-    // Usa URLSearchParams para garantir múltiplos categoriaIds como chaves repetidas
     const params = new URLSearchParams();
     if (nome) params.set("nome", nome);
     if (cor) params.set("cor", cor);
@@ -22,19 +20,15 @@ async function getAll({
     if (categoria) params.set("categoria", categoria);
     if (categoriaId) params.set("categoriaId", categoriaId);
     if (produtoPaiId) params.set("produtoPaiId", produtoPaiId);
-    // Alinha com o backend que espera 'paginaAtual' e 'tamanhoPagina'
+    // paginaAtual/tamanhoPagina seguem o contrato do backend
     params.set("paginaAtual", String(pagina));
     params.set("tamanhoPagina", String(itensPorPagina));
 
     if (Array.isArray(categoriaIds) && categoriaIds.length > 0) {
       categoriaIds.forEach((id) => params.append("categoriaIds", id));
     }
-
-    // Monta URL com query string manualmente para evitar serialização incorreta
     const url = `${RESOURCE}?${params.toString()}`;
     const { data } = await api.get(url);
-
-    // Normaliza propriedades vindas do backend (PascalCase) e camelCase
     const itens = data?.itens ?? data?.Itens ?? [];
     const paginaAtualResp = data?.paginaAtual ?? data?.PaginaAtual ?? 1;
     const totalPaginasResp = data?.totalPaginas ?? data?.TotalPaginas ?? 1;

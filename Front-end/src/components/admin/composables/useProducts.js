@@ -3,29 +3,18 @@ import { useNotifications } from "./useNotifications.js";
 import productService from "../../../services/productService.js";
 import api from "../../../services/api.js";
 
-/**
- * Composable responsável pela gestão de produtos:
- * - Listagem e paginação
- * - Filtros e busca
- * - CRUD (criar, editar, excluir)
- * - Variações
- * - Controle dos modais
- */
 export function useProducts() {
-  // --- Estado principal ---
   const produtos = ref([]);
   const categorias = ref([]);
   const carregando = ref(false);
   const erro = ref(null);
 
-  // --- Filtros e paginação ---
   const busca = ref("");
   const filtroCategorias = ref([]);
   const paginaAtual = ref(1);
   const totalPaginas = ref(1);
   const itensPorPagina = ref(6);
 
-  // --- Modais e seleção ---
   const modalEditarAberto = ref(false);
   const modalExcluirAberto = ref(false);
   const modalVariacoesAberto = ref(false);
@@ -33,7 +22,6 @@ export function useProducts() {
   const modalDetalhesAberto = ref(false);
   const produtoSelecionado = ref(null);
 
-  // --- Variações ---
   const variacoes = ref([]);
   const novaVariacao = ref({
     nome: "",
@@ -43,12 +31,7 @@ export function useProducts() {
     imagem: null,
   });
 
-  // --- Notificações ---
   const { notificacao, show } = useNotifications();
-
-  // =====================================================
-  // 🔹 Funções principais
-  // =====================================================
 
   async function carregarProdutos() {
     try {
@@ -58,7 +41,6 @@ export function useProducts() {
       const { produtos: itens, paginaAtual: pag, totalPaginas: total } =
         await productService.getAll({
           nome: busca.value,
-          // Envia múltiplos IDs de categorias selecionadas (subcategorias e/ou pai)
           categoriaIds: Array.isArray(filtroCategorias.value) && filtroCategorias.value.length > 0
             ? filtroCategorias.value
             : undefined,
@@ -102,7 +84,6 @@ export function useProducts() {
 
   async function carregarCategorias() {
     try {
-      // Busca árvore de categorias para dropdown hierárquico
       const { data } = await api.get("/categoria/hierarquia");
       categorias.value = data;
     } catch (e) {
@@ -123,9 +104,6 @@ export function useProducts() {
     carregarProdutos();
   }
 
-  // =====================================================
-  // 🔹 CRUD
-  // =====================================================
 
   async function salvarProduto(id, formData) {
     try {
@@ -153,9 +131,6 @@ export function useProducts() {
     }
   }
 
-  // =====================================================
-  // 🔹 Variações
-  // =====================================================
 
   async function carregarVariacoes(produtoPaiId) {
     try {
@@ -198,9 +173,6 @@ export function useProducts() {
     }
   }
 
-  // =====================================================
-  // 🔹 Controle dos modais
-  // =====================================================
 
   function abrirModalEdicao(produto) {
     produtoSelecionado.value = {
@@ -234,26 +206,16 @@ export function useProducts() {
     modalNovoAberto.value = true;
   }
 
-  // (notificações centralizadas via useNotifications)
-
-  // =====================================================
-  // 🔹 Lifecycle
-  // =====================================================
 
   onMounted(() => {
     carregarProdutos();
     carregarCategorias();
   });
 
-  // Recarrega ao alterar busca ou filtros
   watch([busca, filtroCategorias], () => {
     paginaAtual.value = 1;
     carregarProdutos();
   });
-
-  // =====================================================
-  // 🔹 Retorno do composable
-  // =====================================================
 
   return {
     produtos,
