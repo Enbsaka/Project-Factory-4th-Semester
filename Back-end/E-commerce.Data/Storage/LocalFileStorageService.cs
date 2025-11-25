@@ -1,7 +1,7 @@
 using Dunder_Store.Interfaces.IServices;
 using System.IO;
 
-namespace Dunder_Store.Data.Services
+namespace Dunder_Store.Data.Storage
 {
     public class LocalFileStorageService : IFileStorageService
     {

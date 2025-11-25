@@ -9,7 +9,7 @@ using Dunder_Store.Interfaces.IRepositories;
 using Dunder_Store.Interfaces.IServices;
 using Dunder_Store.Repositories;
 using Dunder_Store.Services;
-using Dunder_Store.Data.Services;
+using Dunder_Store.Data.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
