@@ -47,7 +47,6 @@ Projeto de comércio eletrônico focado em produtos tecnológicos, desenvolvido 
 
 ## 📚 Endpoints úteis
 - Produtos: `GET /api/produto`, `POST /api/produto`, `PATCH /api/produto/{id}`, `DELETE /api/produto/{id}`
-- Importação CSV (Admin): `POST /api/produto/import-csv`
 - Categorias hierárquicas: `GET /api/categoria/hierarquia`
 
 ## 📋 Considerações finais
