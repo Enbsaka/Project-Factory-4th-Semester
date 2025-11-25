@@ -14,8 +14,8 @@
 </template>
 
 <script setup>
-import NavbarStoreComponent from '../public/NavbarStoreComponent.vue'
-import FooterStoreComponent from '../public/FooterStoreComponent.vue';
+import NavbarStoreComponent from '../public/navbar/NavbarStoreComponent.vue'
+import FooterStoreComponent from '../public/footer/FooterStoreComponent.vue';
 </script>
 
 <style scoped>

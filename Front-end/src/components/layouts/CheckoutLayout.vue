@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import NavbarCheckout from '../public/NavbarCheckout.vue';
+import NavbarCheckout from '../public/navbar/NavbarCheckout.vue';
 </script>
 
 <style scoped>

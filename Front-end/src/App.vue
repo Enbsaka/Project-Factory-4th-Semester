@@ -10,7 +10,6 @@ import { useRoute } from "vue-router";
 import ClientLayout from "../src/components/layouts/ClientLayout.vue";
 import AdminLayout from "../src/components/layouts/AdminLayout.vue";
 import CheckoutLayout from "./components/layouts/CheckoutLayout.vue";
-import FooterStoreComponent from "./components/public/FooterStoreComponent.vue";
 
 const route = useRoute();
 

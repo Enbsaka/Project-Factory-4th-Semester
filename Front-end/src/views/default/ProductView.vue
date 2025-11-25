@@ -144,9 +144,9 @@ import "swiper/css";
 import "swiper/css/zoom";
 import "swiper/css/navigation";
 import { useRoute } from "vue-router";
-import AddToCartButton from "../../components/public/AddToCartButton.vue";
+import AddToCartButton from "../../components/public/buttons/AddToCartButton.vue";
 const AddtToCartButton = AddToCartButton;
-import ShopNowButton from "../../components/public/ShopNowButton.vue";
+import ShopNowButton from "../../components/public/buttons/ShopNowButton.vue";
 import productService from "../../services/productService.js";
 
 const route = useRoute();
