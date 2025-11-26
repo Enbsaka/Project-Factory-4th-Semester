@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Evita que arquivos da pasta Tests sejam compilados pelo projeto principal -->
+  <ItemGroup>
+    <Compile Remove="Tests/**/*.cs" />
+    <None Include="Tests/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.9">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.9" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql.Design" Version="1.1.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\produtos\0f9336fe-1b07-42c1-9d9f-56717184c52c.png" />
+    <None Include="wwwroot\produtos\174a316d-e6c2-4a8b-b2f0-a9948e873d51.jpg" />
+    <None Include="wwwroot\produtos\26e33e61-5ba6-45ac-85ea-da318cd0f3b2.jpg" />
+    <None Include="wwwroot\produtos\384ef7d1-aec3-4661-b0b8-9c78712b1492.png" />
+    <None Include="wwwroot\produtos\3e356eba-3cb9-4a7b-9b89-75851d079d5f.webp" />
+    <None Include="wwwroot\produtos\4f1897f7-3d1b-4e81-892d-6c45de1285f1.jpg" />
+    <None Include="wwwroot\produtos\557e44d1-5661-44dd-8361-5a5d0e692a59.jpg" />
+    <None Include="wwwroot\produtos\580395d9-a2cf-4b03-ae6e-ba7157b31170.webp" />
+    <None Include="wwwroot\produtos\59121165-08a9-41ba-9e58-5de6c6b0482f.jpg" />
+    <None Include="wwwroot\produtos\69a9406a-51f2-405e-a2e9-1e324ccc9d2d.jpg" />
+    <None Include="wwwroot\produtos\7a3fce6d-b792-4ae1-8147-d2b52fb0d0b1.jpg" />
+    <None Include="wwwroot\produtos\87a25295-3608-47c0-b4dc-95766ed7f722.jpg" />
+    <None Include="wwwroot\produtos\98b55687-1422-435a-a729-77e49365556e.jpg" />
+    <None Include="wwwroot\produtos\a31807e4-50b7-4a89-8717-6ce26ffacd07.jpg" />
+    <None Include="wwwroot\produtos\abc61732-c93f-427a-84ae-14caabef99b7.png" />
+    <None Include="wwwroot\produtos\b4b7b8ec-4bf8-4b73-b6b1-a20d95801d4d.webp" />
+    <None Include="wwwroot\produtos\ba4fdd4d-42ce-477d-b6c3-42b21c5fe5c2.jpg" />
+    <None Include="wwwroot\produtos\c358ce6d-c411-4633-a91a-033afa735b8d.jpg" />
+    <None Include="wwwroot\produtos\c5f7870d-23c4-410c-9770-61ad0e85c192.jpg" />
+    <None Include="wwwroot\produtos\d818c65f-2022-4304-b397-79eaef44b2f8.jpg" />
+    <None Include="wwwroot\produtos\e74fb5f8-7a30-4b6e-b795-20040ae03ed1.jpeg" />
+    <None Include="wwwroot\produtos\e7ed67b9-2803-4339-9f28-fb13867166cc.jpeg" />
+    <None Include="wwwroot\produtos\ea90bf22-0199-4037-8565-03c0a1497d85.webp" />
+    <None Include="wwwroot\produtos\f11e7779-cc88-4419-8a45-edd49943c296.jpg" />
+    <None Include="wwwroot\produtos\f59575c0-faaa-4a90-9043-e723cd8af5b0.webp" />
+    <None Include="wwwroot\produtos\f83cfd8b-87ed-490d-9406-2a49665b95e6.jpg" />
+  </ItemGroup>
+
+</Project>

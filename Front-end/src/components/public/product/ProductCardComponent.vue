@@ -1,0 +1,1 @@
+<!-- Componente vazio conforme original -->

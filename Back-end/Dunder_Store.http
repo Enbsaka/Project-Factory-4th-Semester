@@ -1,0 +1,6 @@
+@Dunder_Store_HostAddress = http://localhost:5211
+
+GET {{Dunder_Store_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
