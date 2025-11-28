@@ -33,7 +33,34 @@ Projeto de comércio eletrônico focado em produtos tecnológicos, desenvolvido 
    - `dotnet restore`
 4. Execute a API:
    - `dotnet run`
-   - Endereço padrão: `http://localhost:8000` (Swagger habilitado)
+- Endereço padrão: `http://localhost:8000` (Swagger habilitado)
+
+### 🔐 Configuração de e‑mail (SMTP)
+
+- Use variáveis de ambiente para não expor segredos:
+
+```
+Email__SmtpHost=smtp.gmail.com
+Email__Port=587
+Email__EnableSsl=true
+Email__User=dunderstoreofc@gmail.com
+Email__From=dunderstoreofc@gmail.com
+Email__FromName=Dunder Store
+Email__Password=SENHA_DE_APP_GMAIL
+```
+
+- Windows PowerShell (exemplo):
+
+```
+$env:Email__SmtpHost='smtp.gmail.com'
+$env:Email__Port='587'
+$env:Email__EnableSsl='true'
+$env:Email__User='dunderstoreofc@gmail.com'
+$env:Email__From='dunderstoreofc@gmail.com'
+$env:Email__FromName='Dunder Store'
+$env:Email__Password='SUA_SENHA_DE_APP'
+dotnet run --project .\Back-end\Dunder_Store.csproj
+```
 
 ### Frontend (Vue)
 1. Acesse a pasta `Front-end`
@@ -43,7 +70,27 @@ Projeto de comércio eletrônico focado em produtos tecnológicos, desenvolvido 
    - crie `.env` com `VITE_API_URL=http://localhost:8000/api`
 4. Inicie o servidor de desenvolvimento:
    - `npm run dev`
-   - Endereço padrão: `http://localhost:3000`
+- Endereço padrão: `http://localhost:3000`
+
+## ✅ Testes e relatórios
+
+- Back‑end (xUnit):
+
+```
+dotnet test .\Back-end\Tests\Unit\Dunder_Store.UnitTests.csproj --no-restore --no-build --logger html; start .\Back-end\Tests\Unit\TestResult.html
+dotnet test .\Back-end\Tests\Integration\Dunder_Store.IntegrationTests.csproj --no-restore --no-build --logger html; start .\Back-end\Tests\Integration\TestResult.html
+```
+
+- Front‑end (Playwright):
+
+```
+cd Front-end
+npx playwright test --reporter=html && npx playwright show-report
+```
+
+- Observações:
+  - Relatórios HTML são abertos automaticamente com `start` (Windows).
+  - Artefatos de Playwright (`playwright-report/`, `test-results/`) já estão ignorados via `.gitignore`.
 
 ## 📚 Endpoints úteis
 - Produtos: `GET /api/produto`, `POST /api/produto`, `PATCH /api/produto/{id}`, `DELETE /api/produto/{id}`
