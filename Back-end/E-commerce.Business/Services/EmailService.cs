@@ -47,7 +47,8 @@ namespace Dunder_Store.Services
                 EnableSsl = ssl,
                 Credentials = new System.Net.NetworkCredential(user, pass)
             };
-            using var mail = new MailMessage(from, cliente.Email)
+            var fromName = section.GetValue<string>("FromName") ?? brand;
+            using var mail = new MailMessage(new MailAddress(from, fromName), new MailAddress(cliente.Email))
             {
                 Subject = "Bem-vindo à Dunder Store",
                 Body = htmlWelcome,
@@ -85,7 +86,8 @@ namespace Dunder_Store.Services
                 EnableSsl = ssl,
                 Credentials = new System.Net.NetworkCredential(user, pass)
             };
-            using var mail = new MailMessage(from, to)
+            var fromName2 = section.GetValue<string>("FromName") ?? brand;
+            using var mail = new MailMessage(new MailAddress(from, fromName2), new MailAddress(to))
             {
                 Subject = "Seu pedido foi finalizado",
                 Body = htmlReceipt,
