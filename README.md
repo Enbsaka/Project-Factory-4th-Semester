@@ -1,6 +1,6 @@
 # Ecommerce‑Tech (Fábrica de Projetos Ágeis IV)
 
-Projeto de comércio eletrônico focado em produtos tecnológicos, desenvolvido como parte da Fábrica de Códigos IV.
+Projeto de comércio de moda focado em produtos como camisas e calçados, desenvolvido como parte da Fábrica de Códigos IV.
 
 ## 🛠 Tecnologias
 - Frontend: Vue.js (Vite)
